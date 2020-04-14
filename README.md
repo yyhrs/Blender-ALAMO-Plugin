@@ -1,4 +1,4 @@
-# Blender-ALAMAO-Plugin
+# Blender-ALAMO-Plugin
 
 A plugin that allow reading and writing of ALAMO-Engine model(.alo) and animation(.ala) files.  
 Specifically designed to work with Empire at War: Forces of Corruption.
