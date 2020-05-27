@@ -414,6 +414,93 @@ class ALO_Importer(bpy.types.Operator):
                 counter += 1
             return animation_mapping
 
+        def material_group_basic(context, operator, group_name, material):            
+            node_group = bpy.data.node_groups.new(group_name, 'ShaderNodeTree')
+
+            node = node_group.nodes.new
+            link = node_group.links.new
+
+            group_in = node('NodeGroupInput')
+            group_in.location.x -= 700
+            node_group.inputs.new('NodeSocketColor', 'Team Color')
+            spec = node_group.inputs.new('NodeSocketFloat', 'Specular Intensity')
+            spec.default_value  = 0.1
+            
+            group_out = node('NodeGroupOutput')
+            group_out.location.x += 300.0
+            node_group.outputs.new('NodeSocketShader', 'Surface')
+            
+            # if (material.shaderList.shaderList == "MeshAdditive.fx")
+            #     continue
+            # else
+            #     bsdf = nodes.new("ShaderNodeBsdfPrincipled")
+
+            bsdf = node("ShaderNodeBsdfPrincipled")
+
+            base_image_node = node("ShaderNodeTexImage")
+            base_image_node.location.x -= 500
+
+            mix_node = node("ShaderNodeMixRGB")
+            mix_node.blend_type = 'COLOR'
+            mix_node.location.x -= 200
+
+            link(base_image_node.outputs['Color'], mix_node.inputs['Color1'])
+            link(base_image_node.outputs['Alpha'], mix_node.inputs['Fac'])
+            link(mix_node.outputs['Color'], bsdf.inputs['Base Color'])
+
+            normal_image_node = node("ShaderNodeTexImage")
+            normal_image_node.location.x -= 1100.0
+            normal_image_node.location.y -= 300.0
+
+            normal_map_node = node("ShaderNodeNormalMap")
+            normal_map_node.space = 'TANGENT'
+            normal_map_node.location.x -= 800.0
+            normal_map_node.location.y -= 300.0
+
+            normal_split = node("ShaderNodeSeparateRGB")
+            normal_split.location.x -= 600
+            normal_split.location.y -= 300
+            normal_invert = node("ShaderNodeInvert")
+            normal_invert.location.x -= 400
+            normal_invert.location.y -= 300
+            normal_combine = node("ShaderNodeCombineRGB")
+            normal_combine.location.x -= 200
+            normal_combine.location.y -= 300
+
+            specular_multiply = node("ShaderNodeMath")
+            specular_multiply.operation = 'MULTIPLY'
+            specular_multiply.location.x -= 800
+            specular_multiply.location.y -= 100
+                
+            link(normal_image_node.outputs['Color'], normal_map_node.inputs['Color'])
+            link(normal_map_node.outputs['Normal'], normal_split.inputs['Image'])
+            link(normal_split.outputs['R'], normal_combine.inputs['R'])
+            link(normal_split.outputs['G'], normal_invert.inputs['Color'])
+            link(normal_invert.outputs['Color'], normal_combine.inputs['G'])
+            link(normal_split.outputs['B'], normal_combine.inputs['B'])
+            link(normal_combine.outputs[0], bsdf.inputs['Normal'])
+
+            link(normal_image_node.outputs['Alpha'], specular_multiply.inputs[0])
+
+            link(group_in.outputs['Team Color'], mix_node.inputs['Color2'])
+            link(group_in.outputs['Specular Intensity'], specular_multiply.inputs[1])
+            link(specular_multiply.outputs[0], bsdf.inputs['Specular'])
+            
+            if (material.BaseTexture != 'None'):
+                if (material.BaseTexture in bpy.data.images):
+                    diffuse_texture = bpy.data.images[material.BaseTexture]
+                    base_image_node.image = diffuse_texture
+
+            if (material.NormalTexture != 'None'):
+                if (material.NormalTexture in bpy.data.images):
+                    normal_texture = bpy.data.images[material.NormalTexture]
+                    normal_image_node.image = normal_texture
+                    normal_image_node.image.colorspace_settings.name = 'Raw'
+                    
+            link(bsdf.outputs[0], group_out.inputs[0])
+
+            return node_group
+
         def set_up_textures(material):
 
             material.use_nodes = True
@@ -423,53 +510,17 @@ class ALO_Importer(bpy.types.Operator):
 
             #clean up
             while(nodes): nodes.remove(nodes[0])
-
+    
             output  = nodes.new("ShaderNodeOutputMaterial")
-            bsdf = nodes.new("ShaderNodeBsdfPrincipled")
 
-            base_image_node = nodes.new("ShaderNodeTexImage")
-            normal_image_node = nodes.new("ShaderNodeTexImage")
+            custom_node_name = material.name + "Group"
+            my_group = material_group_basic(self, context, custom_node_name, material)
+            mat_group = nt.nodes.new("ShaderNodeGroup")
+            mat_group.node_tree = bpy.data.node_groups[my_group.name]
+            mat_group.location.x -= 200.0
 
-            normal_map_node = nodes.new("ShaderNodeNormalMap")
-            normal_map_node.space = 'TANGENT'
-            normal_map_node.uv_map = 'MainUV'
+            links.new(mat_group.outputs['Surface'], output.inputs['Surface'])
 
-            uvmap   = nodes.new("ShaderNodeUVMap")
-            uvmap.uv_map = "MainUV"
-
-            if material.BaseTexture != 'None':
-
-                links.new(output.inputs['Surface'], bsdf.outputs['BSDF'])
-                links.new(bsdf.inputs['Base Color'],   base_image_node.outputs['Color'])
-                links.new(bsdf.inputs['Alpha'],   base_image_node.outputs['Alpha'])
-                links.new(base_image_node.inputs['Vector'],    uvmap.outputs['UV'])
-
-                if material.BaseTexture in bpy.data.images:
-                    diffuse_texture = bpy.data.images[material.BaseTexture]
-                    base_image_node.image = diffuse_texture
-
-            if material.NormalTexture != 'None':
-                links.new(normal_image_node.outputs['Color'], normal_map_node.inputs['Color'])
-                links.new(normal_map_node.outputs['Normal'], bsdf.inputs['Normal'])
-                links.new(normal_image_node.inputs['Vector'],    uvmap.outputs['UV'])
-
-                if material.NormalTexture in bpy.data.images:
-                    normal_texture = bpy.data.images[material.NormalTexture]
-                    normal_image_node.image = normal_texture
-                    normal_image_node.image.colorspace_settings.name = 'Raw'
-
-            # distribute nodes along the x axis
-            for index, node in enumerate((uvmap, base_image_node, bsdf, output)):
-                node.location.x = 200.0 * index
-
-            normal_map_node.location = bsdf.location
-            normal_map_node.location.y += 300.0
-
-            output.location.x += 200.0
-            bsdf.location.x += 200.0
-
-            normal_image_node.location = base_image_node.location
-            normal_image_node.location.y += 300.0
 
         def create_object(currentMesh):
             global mesh
