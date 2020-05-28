@@ -491,7 +491,7 @@ class ALO_Importer(bpy.types.Operator):
             normal_image_node.location.y -= 300.0
 
             normal_map_node = node("ShaderNodeNormalMap")
-            normal_map_node.space = 'OBJECT'
+            normal_map_node.space = 'TANGENT'
             normal_map_node.location.x -= 800.0
             normal_map_node.location.y -= 300.0
 
