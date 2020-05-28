@@ -430,6 +430,9 @@ class ALO_Importer(bpy.types.Operator):
             transparent.location.x -= 200
             transparent.location.y -= 50
 
+            base_image_node = node("ShaderNodeTexImage")
+            base_image_node.location.x -= 500
+
             if is_emissive:
                 group_in = node('NodeGroupInput')
                 group_in.location.x -= 700
@@ -437,23 +440,20 @@ class ALO_Importer(bpy.types.Operator):
                 emissive.default_value = 1.0
                 color = node("ShaderNodeEmission")
                 link(group_in.outputs[0], color.inputs[1])
+                eevee_alpha_fix = node("ShaderNodeInvert")
+                eevee_alpha_fix.location.x -= 500
+                eevee_alpha_fix.location.y += 300
+                link(base_image_node.outputs[1], eevee_alpha_fix.inputs[1]) # Fix for obnoxious transparency bug in Eevee
+                link(base_image_node.outputs['Color'], mix_shader.inputs['Fac'])
 
             else:
                 color = node("ShaderNodeBsdfDiffuse")
+                link(base_image_node.outputs['Alpha'], mix_shader.inputs['Fac'])
 
             color.location.x -= 200
             color.location.y -= 150
 
-            base_image_node = node("ShaderNodeTexImage")
-            base_image_node.location.x -= 500
-
-            eevee_alpha_fix = node("ShaderNodeInvert")
-            eevee_alpha_fix.location.x -= 500
-            eevee_alpha_fix.location.y += 300
-
-            link(base_image_node.outputs['Color'], mix_shader.inputs['Fac'])
             link(base_image_node.outputs['Color'], color.inputs[0])
-            link(base_image_node.outputs[1], eevee_alpha_fix.inputs[1]) # Fix for obnoxious transparency bug in Eevee
             link(transparent.outputs[0], mix_shader.inputs[1])
             link(color.outputs[0], mix_shader.inputs[2])
             
