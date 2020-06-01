@@ -857,6 +857,7 @@ class ALO_Importer(bpy.types.Operator):
             bpy.ops.object.select_all(context_override, action='DESELECT')
             object.select_set(True)
             bpy.ops.object.hide_view_set(context_override)
+            object.hide_render = True
 
         def hideLODs():
             #hides all but the most detailed LOD in Blender
