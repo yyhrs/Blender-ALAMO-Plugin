@@ -414,6 +414,58 @@ class ALO_Importer(bpy.types.Operator):
                 counter += 1
             return animation_mapping
 
+        def material_group_additive(context, operator, group_name, material, is_emissive):            
+            node_group = bpy.data.node_groups.new(group_name, 'ShaderNodeTree')
+
+            node = node_group.nodes.new
+            link = node_group.links.new
+            
+            group_out = node('NodeGroupOutput')
+            group_out.location.x += 200.0
+            node_group.outputs.new('NodeSocketShader', 'Surface')
+
+            mix_shader = node("ShaderNodeMixShader")
+
+            transparent = node("ShaderNodeBsdfTransparent")
+            transparent.location.x -= 200
+            transparent.location.y -= 50
+
+            base_image_node = node("ShaderNodeTexImage")
+            base_image_node.location.x -= 500
+
+            if is_emissive:
+                group_in = node('NodeGroupInput')
+                group_in.location.x -= 700
+                emissive = node_group.inputs.new('NodeSocketFloat', 'Emissive Strength')
+                emissive.default_value = 1.0
+                color = node("ShaderNodeEmission")
+                link(group_in.outputs[0], color.inputs[1])
+                eevee_alpha_fix = node("ShaderNodeInvert")
+                eevee_alpha_fix.location.x -= 500
+                eevee_alpha_fix.location.y += 300
+                link(base_image_node.outputs[1], eevee_alpha_fix.inputs[1]) # Fix for obnoxious transparency bug in Eevee
+                link(base_image_node.outputs['Color'], mix_shader.inputs['Fac'])
+
+            else:
+                color = node("ShaderNodeBsdfDiffuse")
+                link(base_image_node.outputs['Alpha'], mix_shader.inputs['Fac'])
+
+            color.location.x -= 200
+            color.location.y -= 150
+
+            link(base_image_node.outputs['Color'], color.inputs[0])
+            link(transparent.outputs[0], mix_shader.inputs[1])
+            link(color.outputs[0], mix_shader.inputs[2])
+            
+            if (material.BaseTexture != 'None'):
+                if (material.BaseTexture in bpy.data.images):
+                    diffuse_texture = bpy.data.images[material.BaseTexture]
+                    base_image_node.image = diffuse_texture
+                    
+            link(mix_shader.outputs[0], group_out.inputs[0])
+
+            return node_group
+
         def material_group_basic(context, operator, group_name, material):            
             node_group = bpy.data.node_groups.new(group_name, 'ShaderNodeTree')
 
@@ -427,15 +479,9 @@ class ALO_Importer(bpy.types.Operator):
             spec.default_value  = 0.1
             
             group_out = node('NodeGroupOutput')
-            group_out.location.x += 300.0
-            node_group.outputs.new('NodeSocketShader', 'Surface')
-            
-            # if (material.shaderList.shaderList == "MeshAdditive.fx")
-            #     continue
-            # else
-            #     bsdf = nodes.new("ShaderNodeBsdfPrincipled")
-
-            bsdf = node("ShaderNodeBsdfPrincipled")
+            node_group.outputs.new('NodeSocketColor', 'Base Color')
+            node_group.outputs.new('NodeSocketFloat', 'Specular')
+            node_group.outputs.new('NodeSocketVector', 'Normal')
 
             base_image_node = node("ShaderNodeTexImage")
             base_image_node.location.x -= 500
@@ -446,45 +492,47 @@ class ALO_Importer(bpy.types.Operator):
 
             link(base_image_node.outputs['Color'], mix_node.inputs['Color1'])
             link(base_image_node.outputs['Alpha'], mix_node.inputs['Fac'])
-            link(mix_node.outputs['Color'], bsdf.inputs['Base Color'])
+            link(mix_node.outputs['Color'], group_out.inputs['Base Color'])
 
             normal_image_node = node("ShaderNodeTexImage")
             normal_image_node.location.x -= 1100.0
             normal_image_node.location.y -= 300.0
 
-            normal_map_node = node("ShaderNodeNormalMap")
-            normal_map_node.space = 'TANGENT'
-            normal_map_node.location.x -= 800.0
-            normal_map_node.location.y -= 300.0
-
             normal_split = node("ShaderNodeSeparateRGB")
-            normal_split.location.x -= 600
+            normal_split.location.x -= 800
             normal_split.location.y -= 300
-            normal_invert = node("ShaderNodeInvert")
-            normal_invert.location.x -= 400
+            normal_invert = node("ShaderNodeMath")
+            normal_invert.operation = 'SUBTRACT'
+            normal_invert.inputs[0].default_value = 1
+            normal_invert.location.x -= 600
             normal_invert.location.y -= 300
             normal_combine = node("ShaderNodeCombineRGB")
-            normal_combine.location.x -= 200
+            normal_combine.location.x -= 400
             normal_combine.location.y -= 300
+
+            normal_map_node = node("ShaderNodeNormalMap")
+            normal_map_node.space = 'TANGENT'
+            normal_map_node.location.x -= 200.0
+            normal_map_node.location.y -= 300.0
 
             specular_multiply = node("ShaderNodeMath")
             specular_multiply.operation = 'MULTIPLY'
             specular_multiply.location.x -= 800
             specular_multiply.location.y -= 100
                 
-            link(normal_image_node.outputs['Color'], normal_map_node.inputs['Color'])
-            link(normal_map_node.outputs['Normal'], normal_split.inputs['Image'])
+            link(normal_image_node.outputs['Color'], normal_split.inputs['Image'])
             link(normal_split.outputs['R'], normal_combine.inputs['R'])
-            link(normal_split.outputs['G'], normal_invert.inputs['Color'])
-            link(normal_invert.outputs['Color'], normal_combine.inputs['G'])
+            link(normal_split.outputs['G'], normal_invert.inputs[1])
+            link(normal_invert.outputs[0], normal_combine.inputs['G'])
             link(normal_split.outputs['B'], normal_combine.inputs['B'])
-            link(normal_combine.outputs[0], bsdf.inputs['Normal'])
+            link(normal_combine.outputs[0], normal_map_node.inputs[1])
+            link(normal_map_node.outputs[0], group_out.inputs[2])
 
             link(normal_image_node.outputs['Alpha'], specular_multiply.inputs[0])
 
             link(group_in.outputs['Team Color'], mix_node.inputs['Color2'])
             link(group_in.outputs['Specular Intensity'], specular_multiply.inputs[1])
-            link(specular_multiply.outputs[0], bsdf.inputs['Specular'])
+            link(specular_multiply.outputs[0], group_out.inputs[1])
             
             if (material.BaseTexture != 'None'):
                 if (material.BaseTexture in bpy.data.images):
@@ -496,8 +544,6 @@ class ALO_Importer(bpy.types.Operator):
                     normal_texture = bpy.data.images[material.NormalTexture]
                     normal_image_node.image = normal_texture
                     normal_image_node.image.colorspace_settings.name = 'Raw'
-                    
-            link(bsdf.outputs[0], group_out.inputs[0])
 
             return node_group
 
@@ -512,14 +558,35 @@ class ALO_Importer(bpy.types.Operator):
             while(nodes): nodes.remove(nodes[0])
     
             output  = nodes.new("ShaderNodeOutputMaterial")
-
             custom_node_name = material.name + "Group"
-            my_group = material_group_basic(self, context, custom_node_name, material)
-            mat_group = nt.nodes.new("ShaderNodeGroup")
-            mat_group.node_tree = bpy.data.node_groups[my_group.name]
-            mat_group.location.x -= 200.0
+            my_group = 'null'
 
-            links.new(mat_group.outputs['Surface'], output.inputs['Surface'])
+            if ("Additive" in material.shaderList.shaderList):
+                material.blend_method = "BLEND"
+                my_group = material_group_additive(self, context, custom_node_name, material, True)
+                mat_group = nt.nodes.new("ShaderNodeGroup")
+                mat_group.node_tree = bpy.data.node_groups[my_group.name]
+                mat_group.location.x -= 200.0
+                links.new(mat_group.outputs[0], output.inputs['Surface'])
+            elif ("Alpha" in material.shaderList.shaderList):
+                material.blend_method = "BLEND"
+                my_group = material_group_additive(self, context, custom_node_name, material, False)
+                mat_group = nt.nodes.new("ShaderNodeGroup")
+                mat_group.node_tree = bpy.data.node_groups[my_group.name]
+                mat_group.location.x -= 200.0
+                links.new(mat_group.outputs[0], output.inputs['Surface'])
+            else:
+                bsdf = nodes.new("ShaderNodeBsdfPrincipled")
+                bsdf.inputs[7].default_value = 1 # Set roughness to 1
+                bsdf.location.x -= 300.0
+                links.new(bsdf.outputs['BSDF'], output.inputs['Surface'])
+                my_group = material_group_basic(self, context, custom_node_name, material)
+                mat_group = nt.nodes.new("ShaderNodeGroup")
+                mat_group.node_tree = bpy.data.node_groups[my_group.name]
+                mat_group.location.x -= 500.0
+                links.new(mat_group.outputs[0], bsdf.inputs['Base Color'])
+                links.new(mat_group.outputs[1], bsdf.inputs[5])
+                links.new(mat_group.outputs[2], bsdf.inputs['Normal'])
 
 
         def create_object(currentMesh):
@@ -790,6 +857,7 @@ class ALO_Importer(bpy.types.Operator):
             bpy.ops.object.select_all(context_override, action='DESELECT')
             object.select_set(True)
             bpy.ops.object.hide_view_set(context_override)
+            object.hide_render = True
 
         def hideLODs():
             #hides all but the most detailed LOD in Blender
