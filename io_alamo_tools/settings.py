@@ -69,7 +69,7 @@ vertex_format_dict = {
     "RSkinGlossColorize.fx" : "alD3dVertRSkinNU2",
     "RSkinShadowVolume.fx"  : "alD3dVertRSkinNU2",
     "Skydome.fx"            : "alD3dVertNU2",
-    "TerrainMeshBumb.fx"    : "alD3dVertNU2U3U3",
+    "TerrainMeshBump.fx"    : "alD3dVertNU2U3U3",
     "TerrainMeshGloss.fx"   : "alD3dVertNU2",
     "Tree.fx"               : "alD3dVertNU2",
     "LightProxy.fx"         : "alD3dVertNU2",
