@@ -460,6 +460,7 @@ class ALO_Importer(bpy.types.Operator):
             if (material.BaseTexture != 'None'):
                 if (material.BaseTexture in bpy.data.images):
                     diffuse_texture = bpy.data.images[material.BaseTexture]
+                    diffuse_texture.alpha_mode = 'CHANNEL_PACKED'
                     base_image_node.image = diffuse_texture
                     
             link(mix_shader.outputs[0], group_out.inputs[0])
@@ -537,11 +538,13 @@ class ALO_Importer(bpy.types.Operator):
             if (material.BaseTexture != 'None'):
                 if (material.BaseTexture in bpy.data.images):
                     diffuse_texture = bpy.data.images[material.BaseTexture]
+                    diffuse_texture.alpha_mode = 'CHANNEL_PACKED'
                     base_image_node.image = diffuse_texture
 
             if (material.NormalTexture != 'None'):
                 if (material.NormalTexture in bpy.data.images):
                     normal_texture = bpy.data.images[material.NormalTexture]
+                    normal_texture.alpha_mode = 'CHANNEL_PACKED'
                     normal_image_node.image = normal_texture
                     normal_image_node.image.colorspace_settings.name = 'Raw'
 
