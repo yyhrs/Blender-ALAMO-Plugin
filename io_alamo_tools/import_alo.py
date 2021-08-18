@@ -1034,7 +1034,7 @@ class ALO_Importer(bpy.types.Operator):
         global file
         filepath = self.properties.filepath
         file = open(filepath, 'rb') #open file in read binary mode
-        setRenderToEevee()
+        # setRenderToEevee()
         process_active_junk()
         removeShadowDoubles()
         hideLODs()
