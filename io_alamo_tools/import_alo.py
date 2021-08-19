@@ -391,7 +391,7 @@ class ALO_Importer(bpy.types.Operator):
             while (file.tell() < currentPosition + materialChunkSize):
                 active_chunk = file.read(4)
                 if active_chunk == b"\x01\x01\x01\00":
-                    create_material(currentSubMesh)
+                    set_alamo_shader(currentSubMesh)
                 elif active_chunk == b"\x02\x01\x01\00":
                     read_int(currentSubMesh.material)
                 elif active_chunk == b"\x03\x01\x01\00":
@@ -402,6 +402,7 @@ class ALO_Importer(bpy.types.Operator):
                     process_texture_chunk(currentSubMesh.material)
                 elif active_chunk == b"\x06\x01\x01\00":
                     read_float4(currentSubMesh.material)
+            create_material(currentSubMesh)
             set_up_textures(currentSubMesh.material)
 
         def read_animation_mapping(currentSubMesh):
@@ -591,7 +592,37 @@ class ALO_Importer(bpy.types.Operator):
                 links.new(mat_group.outputs[0], bsdf.inputs['Base Color'])
                 links.new(mat_group.outputs[1], bsdf.inputs[5])
                 links.new(mat_group.outputs[2], bsdf.inputs['Normal'])
+        
+        def create_material(currentSubMesh):
+            obj = bpy.context.object
 
+            # Ugly. Should be able to use set_alamo_shader's shader finder instead?
+            material_props = ["BaseTexture", "NormalTexture", "GlossTexture", "WaveTexture", "DistortionTexture", "CloudTexture", "CloudNormalTexture", "Emissive", "Diffuse", "Specular","Shininess","Colorization" \
+                ,"DebugColor","UVOffset","Color","UVScrollRate","DiffuseColor","EdgeBrightness","BaseUVScale","WaveUVScale","DistortUVScale","BaseUVScrollRate","WaveUVScrollRate","DistortUVScrollRate","BendScale" \
+                , "Diffuse1","CloudScrollRate","CloudScale", "SFreq",  "TFreq", "DistortionScale", "Atmosphere", "CityColor", "AtmospherePower"]
+
+            if currentSubMesh.material.name == "DUMMYMATERIAL":
+                oldMat = currentSubMesh.material
+
+                texName = currentSubMesh.material.BaseTexture
+                texName = texName[0:len(texName) - 4]
+                mat = assign_material(texName)
+
+                mat.shaderList.shaderList = oldMat.shaderList.shaderList
+                for texture in material_props:
+                    if texture in oldMat:
+                        mat[texture] = oldMat[texture]
+
+                obj.data.materials.clear()
+                obj.data.materials.append(mat)
+                currentSubMesh.material = mat
+                
+        def assign_material(name):
+            if name in bpy.data.materials:
+                mat = bpy.data.materials.get(name)
+            else:
+                mat = bpy.data.materials.new(name)
+            return mat
 
         def create_object(currentMesh):
             global mesh
@@ -665,6 +696,7 @@ class ALO_Importer(bpy.types.Operator):
                 file.seek(1, 1)  # skip string end byte
                 file.seek(1, 1)  # skip child header
                 length = struct.unpack("H", file.read(1) + b'\x00')  # get string length
+                print(texture_function_name)
                 texture_name = ""
                 counter = 0
                 while counter < length[0] - 1:
@@ -685,10 +717,18 @@ class ALO_Importer(bpy.types.Operator):
             mesh.uv_layers.new(name = layerName)
             mesh.uv_layers[-1].data.foreach_set("uv", [uv for pair in [vert_uvs[l.vertex_index] for l in mesh.loops] for uv in pair])
 
-        def create_material(currentSubMesh):  # create material and assign
+        def set_alamo_shader(currentSubMesh):  # create material and assign
             shaderName = read_string()
             obj = bpy.context.object
-            mat = bpy.data.materials.new(obj.name + "Material")
+
+            if shaderName == 'MeshCollision.fx':
+                mat = assign_material("COLLISION")
+            elif (shaderName == 'RSkinShadowVolume.fx' or shaderName == 'MeshShadowVolume.fx'):
+                mat = assign_material("SHADOW")
+            else:
+                mat = assign_material("DUMMYMATERIAL")
+                # DUMMYMATERIAL is a temporary material to allow Alamo shader properties to be assigned. 
+                # Can't assign final material because material names are now based on BaseTexture, and textures aren't known yet. Probably a better way to do this.
 
             #find shader, ignoring case
             currentKey = None
