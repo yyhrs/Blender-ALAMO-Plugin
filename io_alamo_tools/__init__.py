@@ -1,8 +1,8 @@
 bl_info = {
     "name": "ALAMO Tools",
-    "author": "Gaukler",
-    "version": (0, 0, 1, 0),
-    "blender": (2, 82, 0),
+    "author": "Gaukler, evilbobthebob, inertial",
+    "version": (0, 0, 2, 0),
+    "blender": (2, 93, 0),
     "category": "Import-Export"
 }
 
