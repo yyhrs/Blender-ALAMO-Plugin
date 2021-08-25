@@ -636,6 +636,8 @@ class ALO_Importer(bpy.types.Operator):
 
             texName = currentSubMesh.material.BaseTexture
             texName = texName[0:len(texName) - 4] + " Material"
+            if texName in bpy.data.materials and oldMat.shaderList.shaderList != bpy.data.materials.get(texName).shaderList.shaderList:
+                texName += "1"
             mat = assign_material(texName)
 
             mat.shaderList.shaderList = oldMat.shaderList.shaderList
