@@ -61,18 +61,32 @@ class ALO_Importer(bpy.types.Operator):
         default=True,
     )
 
+    textureOverride: EnumProperty(
+        name = "Submod Texture Override",
+        description = "Try to import textures from a different submod",
+        items=(
+            ("NONE", "None", ""),
+            ('CoreSaga', "Core Saga", ""),
+            ('FotR', "Fall of the Republic", ""),
+            ('GCW', "Imperial Reign", ""),
+            ('Rev', "Revan's Revenge", ""),
+            ('TR', "Thrawn's Revenge", ""),
+        ),
+        default="NONE",
+    )
+
     def draw(self, context):
         layout = self.layout
 
         layout.prop(self, "importAnimations")
         layout.prop(self, "parentName")
+        layout.prop(self, "textureOverride")
 
     filepath: StringProperty(
         name="File Path", description="Filepath used for importing the ALO file", maxlen=1024, default="")
 
     # execute() is called by blender when running the operator.
     def execute(self, context):
-
         # main structure
 
         def process_active_junk():
@@ -626,7 +640,7 @@ class ALO_Importer(bpy.types.Operator):
 
             mat.shaderList.shaderList = oldMat.shaderList.shaderList
 
-            # Ugly. Should be able to use set_alamo_shader's shader finder instead?
+            # TODO: Extract set_alamo_shader's shader finder to new function, use that here.
             material_props = ["BaseTexture", "NormalTexture", "GlossTexture", "WaveTexture", "DistortionTexture", "CloudTexture", "CloudNormalTexture", "Emissive", "Diffuse", "Specular", "Shininess", "Colorization", "DebugColor", "UVOffset", "Color", "UVScrollRate", "DiffuseColor",
                               "EdgeBrightness", "BaseUVScale", "WaveUVScale", "DistortUVScale", "BaseUVScrollRate", "WaveUVScrollRate", "DistortUVScrollRate", "BendScale", "Diffuse1", "CloudScrollRate", "CloudScale", "SFreq",  "TFreq", "DistortionScale", "Atmosphere", "CityColor", "AtmospherePower"]
 
@@ -722,9 +736,7 @@ class ALO_Importer(bpy.types.Operator):
                 counter += 1
             file.seek(1, 1)  # skip string end byte
             file.seek(1, 1)  # skip child header
-            length = struct.unpack("H", file.read(
-                1) + b'\x00')  # get string length
-            print(texture_function_name)
+            length = struct.unpack("H", file.read(1) + b'\x00')  # get string length
             texture_name = ""
             counter = 0
             while counter < length[0] - 1:
@@ -736,7 +748,7 @@ class ALO_Importer(bpy.types.Operator):
             if texture_name != "None":
                 texture_name = texture_name[0:len(texture_name) - 4] + ".dds"
             file.seek(1, 1)  # skip string end byte
-
+            
             load_image(texture_name)
             exec('material.' + texture_function_name + '= texture_name')
 
@@ -980,6 +992,21 @@ class ALO_Importer(bpy.types.Operator):
 
         # material utility functions
 
+        def textureOverride(path, submod, texture_name):
+            submodEnd = path.find("\\Data")
+            submodStart = -1
+            if path.find(submod):
+                submodStart = path.find(submod)
+            if submodStart == -1:
+                submodStart = submodEnd + 1
+            newPath = path[:submodStart] + submod + path[submodEnd:]
+
+            if os.path.isfile(newPath):
+                return newPath
+            else:
+                print(f'{texture_name} not found in {submod}, falling back to default')
+                return path
+
         def load_image(texture_name):
             if texture_name == 'None':
                 return
@@ -989,10 +1016,14 @@ class ALO_Importer(bpy.types.Operator):
                 path = file.name
                 path = os.path.split(path)[0]
                 path = os.path.split(path)[0] + "/TEXTURES/" + texture_name
+                if self.properties.textureOverride != "NONE":
+                    path = textureOverride(path, self.properties.textureOverride, texture_name)
+
                 if os.path.isfile(path):
                     img = bpy.data.images.load(path)
                 else:
                     print("Couldn't find texture: " + texture_name)
+                    self.report({"WARNING"}, "Couldn't find texture: " + texture_name)
                     return
 
         def validate_material_prop(name):
