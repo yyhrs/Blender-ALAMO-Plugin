@@ -61,6 +61,41 @@ class createConstraintBoneButton(bpy.types.Operator):
         bpy.context.view_layer.objects.active = object
         return {'FINISHED'}
 
+class keyframeProxyShow(bpy.types.Operator):
+    bl_idname = "alamo.show_keyframe_proxy"
+    bl_label = "Show"
+    bl_description = "Create a keyframe and set proxyIsHiddenAnimation to False for all selected bones"
+
+    def execute(self, context):
+        bones = bpy.context.selected_pose_bones
+        for bone in bones:
+            bone.keyframe_insert(data_path="proxyIsHiddenAnimation")
+            bone.proxyIsHiddenAnimation = False
+        return {'FINISHED'}
+
+class keyframeProxyHide(bpy.types.Operator):
+    bl_idname = "alamo.hide_keyframe_proxy"
+    bl_label = "Hide"
+    bl_description = "Create a keyframe and set proxyIsHiddenAnimation to True for all selected bones"
+
+    def execute(self, context):
+        bones = bpy.context.selected_pose_bones
+        for bone in bones:
+            bone.keyframe_insert(data_path="proxyIsHiddenAnimation")
+            bone.proxyIsHiddenAnimation = True
+        return {'FINISHED'}
+
+class keyframeProxyRemove(bpy.types.Operator):
+    bl_idname = "alamo.remove_keyframe_proxy"
+    bl_label = "Remove"
+    bl_description = "Remove keyframes from all selected bones"
+
+    def execute(self, context):
+        bones = bpy.context.selected_pose_bones
+        for bone in bones:
+            bone.keyframe_delete(data_path="proxyIsHiddenAnimation")
+        return {'FINISHED'}
+
 def skeletonEnumCallback(scene, context):
     armatures = [('None', 'None', '', '', 0)]
     counter = 1
@@ -114,6 +149,17 @@ class ALAMO_PT_ToolsPanel(bpy.types.Panel):
 
 
         bone = bpy.context.active_bone
+        bones = bpy.context.selected_pose_bones
+        if len(bones) > 1 and bpy.context.mode == 'POSE':
+            col = layout.column(align=True)
+            col.operator('alamo.show_keyframe_proxy', text = "Show",
+                            icon="HIDE_OFF")
+            col.operator('alamo.hide_keyframe_proxy', text = "Hide",
+                            icon="HIDE_ON")
+            col.operator('alamo.remove_keyframe_proxy', text = "Remove",
+                            icon="X")
+
+
         if type(bone) != type(None):
             if(type(bpy.context.active_bone ) is bpy.types.EditBone):
                 c.prop(bone.billboardMode, "billboardMode")
@@ -234,6 +280,9 @@ classes = (
     ALA_Exporter,
     ALAMO_PT_materialPropertyPanel,
     createConstraintBoneButton,
+    keyframeProxyShow,
+    keyframeProxyHide,
+    keyframeProxyRemove,
     ALAMO_PT_ToolsPanel
 )
 
