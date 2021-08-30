@@ -102,8 +102,7 @@ class ALO_Importer(bpy.types.Operator):
                     meshName = processMeshChunk()
                     meshNameList.append(meshName)
                 elif active_chunk == b"\x00\x13\x00\00":  # light chunk is irrelevant
-                    print(
-                        'WARNING: file contains light objects, these are not supported and might cause minor issues')
+                    self.report({"WARNING"}, "ALAMO - File contains light objects, these are not supported and might cause minor issues")
                     size = read_chunk_length()
                     file.seek(size, 1)  # skip to next chunk
                 elif active_chunk == b"\x00\x06\x00\00":
@@ -781,7 +780,7 @@ class ALO_Importer(bpy.types.Operator):
                     break
 
             if currentKey is None:
-                print("Warning: unknown shader: " + shaderName +
+                self.report({"WARNING"}, "ALAMO - Unknown shader: " + shaderName +
                       " setting shader to alDefault.fx")
                 currentKey = "alDefault.fx"
 
@@ -1006,7 +1005,7 @@ class ALO_Importer(bpy.types.Operator):
             if os.path.isfile(newPath):
                 return newPath
             else:
-                print(f'{texture_name} not found in {submod}, falling back to default')
+                self.report({"WARNING"}, f'ALAMO - {texture_name} not found in {submod}, falling back to default')
                 return path
 
         def load_image(texture_name):
@@ -1024,8 +1023,7 @@ class ALO_Importer(bpy.types.Operator):
                 if os.path.isfile(path):
                     img = bpy.data.images.load(path)
                 else:
-                    print("Couldn't find texture: " + texture_name)
-                    self.report({"WARNING"}, "Couldn't find texture: " + texture_name)
+                    self.report({"WARNING"}, "ALAMO - Couldn't find texture: " + texture_name)
                     return
 
         def validate_material_prop(name):
@@ -1035,7 +1033,7 @@ class ALO_Importer(bpy.types.Operator):
             if(name in material_props):
                 return True
             else:
-                print("Unknown material porperty: " + name)
+                self.report({"WARNING"}, "ALAMO - Unknown material porperty: " + name)
                 return False
 
         def read_int(material):

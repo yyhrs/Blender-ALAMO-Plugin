@@ -23,6 +23,19 @@ import sys
 import os
 import bmesh
 import copy
+from contextlib import contextmanager
+
+@contextmanager
+def disable_exception_traceback():
+    """
+    All traceback information is suppressed and only the exception type and value are printed
+    Used to make user friendly errors
+    """
+    default_value = getattr(sys, "tracebacklimit", 1000)  # `1000` is a Python's default value
+    sys.tracebacklimit = 0
+    yield
+    sys.tracebacklimit = default_value  # revert changes
+
 
 class ALO_Exporter(bpy.types.Operator):
 
@@ -408,7 +421,7 @@ class ALO_Exporter(bpy.types.Operator):
                     for index in group_index_list:
                         if index == None:
                             cleanUpModifiers(object)
-                            raise RuntimeError('Missing vertex group on object: ' + object.name)
+                            self.report({"ERROR"}, f'ALAMO - Missing vertex group on object: {object.name}')
 
                     group_index_list.sort()
                     group_to_alo_index = {}
@@ -1300,27 +1313,28 @@ class ALO_Exporter(bpy.types.Operator):
 
         def checkShadowMesh(mesh_list):  #checks if shadow meshes are correct and checks if material is missing
             for object in mesh_list:
-                if len(object.data.materials) == 0:
-                    raise RuntimeError('Missing material on object: ' + object.name)
-                shader = object.data.materials[0].shaderList.shaderList
-                if shader == 'MeshShadowVolume.fx' or shader == 'RSkinShadowVolume.fx':
-                    bm = bmesh.new()  # create an empty BMesh
-                    bm.from_mesh(object.data)  # fill it in from a Mesh
-                    bm.verts.ensure_lookup_table()
+                if len(object.data.materials) > 0:
+                    shader = object.data.materials[0].shaderList.shaderList
+                    if shader in ['MeshShadowVolume.fx', 'RSkinShadowVolume.fx']:
+                        bm = bmesh.new()  # create an empty BMesh
+                        bm.from_mesh(object.data)  # fill it in from a Mesh
+                        bm.verts.ensure_lookup_table()
 
-                    for vertex in bm.verts:
-                        if not vertex.is_manifold:
-                            bm.free()
-                            selectNonManifoldVertices(object)
-                            raise RuntimeError('Non manifold geometry shadow mesh: ' + object.name)
+                        for vertex in bm.verts:
+                            if not vertex.is_manifold:
+                                bm.free()
+                                selectNonManifoldVertices(object)
+                                self.report({"ERROR"}, f'ALAMO - Non manifold geometry shadow mesh: {object.name}')
 
-                    for edge in bm.edges:
-                        if len(edge.link_faces) < 2 :
-                            bm.free()
-                            selectNonManifoldVertices(object)
-                            raise RuntimeError('Non manifold geometry shadow mesh: ' + object.name)
+                        for edge in bm.edges:
+                            if len(edge.link_faces) < 2 :
+                                bm.free()
+                                selectNonManifoldVertices(object)
+                                self.report({"ERROR"}, f'ALAMO - Non manifold geometry shadow mesh: {object.name}')
 
-                    bm.free()
+                        bm.free()
+                else:
+                    self.report({"ERROR"}, f'ALAMO - Missing material on object: {object.name}')
 
 
         def checkUV(mesh_list):  #throws error if object lacks UVs
@@ -1328,16 +1342,16 @@ class ALO_Exporter(bpy.types.Operator):
                 for material in object.data.materials:
                     if material.shaderList.shaderList == 'MeshShadowVolume.fx' or material.shaderList.shaderList == 'RSkinShadowVolume.fx':
                         if len(object.data.materials) > 1:
-                            raise RuntimeError('Multiple materials on shadow volume: ' + object.name + ' , remove additional materials')
+                            self.report({"ERROR"}, f'ALAMO - Multiple materials on shadow volume: {object.name}; remove additional materials')
                         else:
                             return
                     if object.HasCollision:
                         if len(object.data.materials) > 1:
-                            raise RuntimeError('Multiple submeshes/materials on collision mesh: ' + object.name + ' , remove additional materials')
+                            self.report({"ERROR"}, f'ALAMO - Multiple submeshes/materials on collision mesh: {object.name}; remove additional materials')
                 if object.data.uv_layers:   #or material.shaderList.shaderList in settings.no_UV_Shaders:  #currently UVs are needed for everything but shadows
                     continue
                 else:
-                    raise RuntimeError('Missing UV: ' + object.name)
+                    self.report({"ERROR"}, f'ALAMO - Missing UV: {object.name}')
 
         def checkInvalidArmatureModifier(mesh_list): #throws error if armature modifier lacks rig, this would crash the exporter later and checks if skeleton in modifier doesn't match active skeleton
             activeSkeleton = bpy.context.scene.ActiveSkeleton.skeletonEnum
@@ -1345,41 +1359,41 @@ class ALO_Exporter(bpy.types.Operator):
                 for modifier in object.modifiers:
                     if modifier.type == "ARMATURE":
                         if modifier.object == None:
-                            raise RuntimeError('Armature modifier without selected skeleton on: ' + object.name)
+                            self.report({"ERROR"}, f'ALAMO - Armature modifier without selected skeleton on: {object.name}')
                             return True
                         elif modifier.object.type != 'NoneType':
                             if modifier.object.name != activeSkeleton:
-                                raise RuntimeError('Armature modifier skeleton doesnt match active skeleton on: ' + object.name)
+                                self.report({"ERROR"}, f"ALAMO - Armature modifier skeleton doesn't match active skeleton on: {object.name}")
                                 return True
                 for constraint in object.constraints:
                     if constraint.type == 'CHILD_OF':
                         if constraint.target is not None:
                             #print(type(constraint.target))
                             if constraint.target.name != activeSkeleton:
-                                raise RuntimeError('Constraint doesnt match active skeleton on: ' + object.name)
+                                self.report({"ERROR"}, f"ALAMO - Constraint doesn't match active skeleton on: {object.name}")
                                 return True
 
         def checkFaceNumber(mesh_list):  #checks if the number of faces exceeds max ushort, which is used to save the indices
             for object in mesh_list:
                 if len(object.data.polygons) > 65535:
-                    raise RuntimeError('Face number exceeds uShort max on object: ' + object.name + ' split mesh into multiple objects')
+                    self.report({"ERROR"}, f'ALAMO - Face number exceeds uShort max on object: {object.name}; split mesh into multiple objects')
                     return True
 
         def checkAutosmooth(mesh_list):  #prints a warning if Autosmooth is used
             for object in mesh_list:
                 if object.data.use_auto_smooth:
-                    print('Warning: ' + object.name + ' uses autosmooth, ingame shading might not match blender, use edgesplit instead')
+                    self.report({"ERROR"}, f'ALAMO -  {object.name} uses autosmooth, ingame shading might not match blender; use edgesplit instead')
 
         def checkTranslation(mesh_list): #prints warning when translation is not default
             for object in mesh_list:
                 if object.location != mathutils.Vector((0.0, 0.0, 0.0)) or object.rotation_euler != mathutils.Euler((0.0, 0.0, 0.0), 'XYZ') or object.scale != mathutils.Vector((1.0, 1.0, 1.0)):
-                    print('Warning: ' + object.name + ' is not aligned with the world origin, apply translation or bind to bone')
+                    self.report({"ERROR"}, f'ALAMO - {object.name} is not aligned with the world origin; apply translation or bind to bone')
 
         def checkTranslationArmature(): #prints warning when translation is not default
             armature = utils.findArmature()
             if armature != None:
                 if armature.location != mathutils.Vector((0.0, 0.0, 0.0)) or armature.rotation_euler != mathutils.Euler((0.0, 0.0, 0.0), 'XYZ') or armature.scale != mathutils.Vector((1.0, 1.0, 1.0)):
-                    print('Warning: active Armature is not aligned with the world origin')
+                    self.report({"ERROR"}, 'ALAMO - active Armature is not aligned with the world origin')
 
         def unhide():
             hiddenList = []
@@ -1455,14 +1469,21 @@ class ALO_Exporter(bpy.types.Operator):
 
         mesh_list = create_export_list(bpy.context.scene.collection)
 
+        has_errors = []
+
         #check if export objects satisfy requirements (has material, UVs, ...)
-        checkShadowMesh(mesh_list)
-        checkUV(mesh_list)
-        checkFaceNumber(mesh_list)
-        checkAutosmooth(mesh_list)
-        checkTranslation(mesh_list)
-        checkTranslationArmature()
-        checkInvalidArmatureModifier(mesh_list)
+        has_errors.append(checkShadowMesh(mesh_list))
+        has_errors.append(checkUV(mesh_list))
+        has_errors.append(checkFaceNumber(mesh_list))
+        has_errors.append(checkAutosmooth(mesh_list))
+        has_errors.append(checkTranslation(mesh_list))
+        has_errors.append(checkTranslationArmature())
+        has_errors.append(checkInvalidArmatureModifier(mesh_list))
+        
+        for error in has_errors:
+            if error:
+                with disable_exception_traceback():
+                    raise Exception('ALAMO - EXPORT FAILED')
 
         hiddenList = unhide()
         collection_is_hidden_list = unhide_collections(bpy.context.scene.collection)

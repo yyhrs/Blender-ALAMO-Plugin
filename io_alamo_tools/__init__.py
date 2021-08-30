@@ -1,7 +1,7 @@
 bl_info = {
     "name": "ALAMO Tools",
     "author": "Gaukler, evilbobthebob, inertial",
-    "version": (0, 0, 2, 1),
+    "version": (0, 0, 2, 4),
     "blender": (2, 93, 0),
     "category": "Import-Export"
 }
@@ -61,6 +61,30 @@ class createConstraintBoneButton(bpy.types.Operator):
         bpy.context.view_layer.objects.active = object
         return {'FINISHED'}
 
+# class ProxyShow(bpy.types.Operator):
+#     bl_idname = "alamo.show_proxy"
+#     bl_label = "Show"
+#     bl_description = "Create a keyframe and set proxyIsHiddenAnimation to False for all selected bones"
+
+#     def execute(self, context):
+#         bones = bpy.context.selected_pose_bones
+#         for bone in bones:
+#             bone.proxyIsHiddenAnimation = False
+#             bone.keyframe_insert(data_path="proxyIsHiddenAnimation")
+#         return {'FINISHED'}
+
+# class ProxyHide(bpy.types.Operator):
+#     bl_idname = "alamo.hide_proxy"
+#     bl_label = "Hide"
+#     bl_description = "Create a keyframe and set proxyIsHiddenAnimation to True for all selected bones"
+
+#     def execute(self, context):
+#         bones = bpy.context.selected_pose_bones
+#         for bone in bones:
+#             bone.proxyIsHiddenAnimation = True
+#             bone.keyframe_insert(data_path="proxyIsHiddenAnimation")
+#         return {'FINISHED'}
+
 class keyframeProxyShow(bpy.types.Operator):
     bl_idname = "alamo.show_keyframe_proxy"
     bl_label = "Show"
@@ -69,8 +93,10 @@ class keyframeProxyShow(bpy.types.Operator):
     def execute(self, context):
         bones = bpy.context.selected_pose_bones
         for bone in bones:
-            bone.keyframe_insert(data_path="proxyIsHiddenAnimation")
+            if bone.parent is not None:
+                print(f'{bone.parent.name = }')
             bone.proxyIsHiddenAnimation = False
+            bone.keyframe_insert(data_path="proxyIsHiddenAnimation")
         return {'FINISHED'}
 
 class keyframeProxyHide(bpy.types.Operator):
@@ -81,8 +107,8 @@ class keyframeProxyHide(bpy.types.Operator):
     def execute(self, context):
         bones = bpy.context.selected_pose_bones
         for bone in bones:
-            bone.keyframe_insert(data_path="proxyIsHiddenAnimation")
             bone.proxyIsHiddenAnimation = True
+            bone.keyframe_insert(data_path="proxyIsHiddenAnimation")
         return {'FINISHED'}
 
 class keyframeProxyRemove(bpy.types.Operator):
@@ -148,18 +174,17 @@ class ALAMO_PT_ToolsPanel(bpy.types.Panel):
                 c.prop(action, "AnimationEndFrame")
 
 
+        # bones = bpy.context.selected_pose_bones
+        # if bpy.context.mode == 'POSE' and len(bones) > 0:
+        #     col = layout.column(align=True)
+        #     col.operator('alamo.show_keyframe_proxy', text = "Show",
+        #                     icon="HIDE_OFF")
+        #     col.operator('alamo.hide_keyframe_proxy', text = "Hide",
+        #                     icon="HIDE_ON")
+        #     col.operator('alamo.remove_keyframe_proxy', text = "Remove",
+        #                     icon="X")
+
         bone = bpy.context.active_bone
-        bones = bpy.context.selected_pose_bones
-        if len(bones) > 1 and bpy.context.mode == 'POSE':
-            col = layout.column(align=True)
-            col.operator('alamo.show_keyframe_proxy', text = "Show",
-                            icon="HIDE_OFF")
-            col.operator('alamo.hide_keyframe_proxy', text = "Hide",
-                            icon="HIDE_ON")
-            col.operator('alamo.remove_keyframe_proxy', text = "Remove",
-                            icon="X")
-
-
         if type(bone) != type(None):
             if(type(bpy.context.active_bone ) is bpy.types.EditBone):
                 c.prop(bone.billboardMode, "billboardMode")

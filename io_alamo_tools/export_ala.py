@@ -182,7 +182,7 @@ def create_animation():
     # get armature name
     armature = utils.findArmature()
     if armature == None:
-        print("Warning: No armature found!")
+        self.report({"WARNING"}, "No armature found!")
         return b''
 
     chunk += create_anim_info_chunk(armature)
