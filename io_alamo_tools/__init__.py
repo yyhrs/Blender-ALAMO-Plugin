@@ -1,7 +1,7 @@
 bl_info = {
     "name": "ALAMO Tools",
     "author": "Gaukler, evilbobthebob, inertial",
-    "version": (0, 0, 2, 4),
+    "version": (0, 0, 2, 5),
     "blender": (2, 93, 0),
     "category": "Import-Export"
 }
@@ -92,11 +92,15 @@ class keyframeProxyShow(bpy.types.Operator):
 
     def execute(self, context):
         bones = bpy.context.selected_pose_bones
+        arm = bpy.context.active_object.data
         for bone in bones:
-            if bone.parent is not None:
-                print(f'{bone.parent.name = }')
+            arm.bones.active = bone.bone
             bone.proxyIsHiddenAnimation = False
             bone.keyframe_insert(data_path="proxyIsHiddenAnimation")
+
+        for area in bpy.context.screen.areas:
+            if area.type == 'DOPESHEET_EDITOR':
+                area.tag_redraw()
         return {'FINISHED'}
 
 class keyframeProxyHide(bpy.types.Operator):
@@ -106,9 +110,15 @@ class keyframeProxyHide(bpy.types.Operator):
 
     def execute(self, context):
         bones = bpy.context.selected_pose_bones
+        arm = bpy.context.active_object.data
         for bone in bones:
+            arm.bones.active = bone.bone
             bone.proxyIsHiddenAnimation = True
             bone.keyframe_insert(data_path="proxyIsHiddenAnimation")
+
+        for area in bpy.context.screen.areas:
+            if area.type == 'DOPESHEET_EDITOR':
+                area.tag_redraw()
         return {'FINISHED'}
 
 class keyframeProxyRemove(bpy.types.Operator):
@@ -120,6 +130,10 @@ class keyframeProxyRemove(bpy.types.Operator):
         bones = bpy.context.selected_pose_bones
         for bone in bones:
             bone.keyframe_delete(data_path="proxyIsHiddenAnimation")
+            
+        for area in bpy.context.screen.areas:
+            if area.type == 'DOPESHEET_EDITOR':
+                area.tag_redraw()
         return {'FINISHED'}
 
 def skeletonEnumCallback(scene, context):
@@ -174,15 +188,15 @@ class ALAMO_PT_ToolsPanel(bpy.types.Panel):
                 c.prop(action, "AnimationEndFrame")
 
 
-        # bones = bpy.context.selected_pose_bones
-        # if bpy.context.mode == 'POSE' and len(bones) > 0:
-        #     col = layout.column(align=True)
-        #     col.operator('alamo.show_keyframe_proxy', text = "Show",
-        #                     icon="HIDE_OFF")
-        #     col.operator('alamo.hide_keyframe_proxy', text = "Hide",
-        #                     icon="HIDE_ON")
-        #     col.operator('alamo.remove_keyframe_proxy', text = "Remove",
-        #                     icon="X")
+        bones = bpy.context.selected_pose_bones
+        if bpy.context.mode == 'POSE' and len(bones) > 0:
+            col = layout.column(align=True)
+            col.operator('alamo.show_keyframe_proxy', text = "Show",
+                            icon="HIDE_OFF")
+            col.operator('alamo.hide_keyframe_proxy', text = "Hide",
+                            icon="HIDE_ON")
+            col.operator('alamo.remove_keyframe_proxy', text = "Remove",
+                            icon="X")
 
         bone = bpy.context.active_bone
         if type(bone) != type(None):
@@ -195,9 +209,9 @@ class ALAMO_PT_ToolsPanel(bpy.types.Panel):
                     c.prop(bone, "altDecreaseStayHidden")
                     c.prop(bone, "ProxyName")
 
-            elif (type(bpy.context.active_bone) is bpy.types.Bone and bpy.context.mode == 'POSE'):
-                poseBone = object.pose.bones[bone.name]
-                c.prop(poseBone, "proxyIsHiddenAnimation")
+            # elif (type(bpy.context.active_bone) is bpy.types.Bone and bpy.context.mode == 'POSE'):
+            #     poseBone = object.pose.bones[bone.name]
+            #     c.prop(poseBone, "proxyIsHiddenAnimation")
 
 class ALAMO_PT_materialPropertyPanel(bpy.types.Panel):
     bl_label = "Alamo material properties"
