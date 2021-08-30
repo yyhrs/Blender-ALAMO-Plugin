@@ -1491,20 +1491,26 @@ class ALO_Exporter(bpy.types.Operator):
         path = self.properties.filepath
 
         global file
-        file = open(path, 'wb')  # open file in read binary mode
+        if os.access(path, os.W_OK):
+            print(f"Accessing {path = }")
+            file = open(path, 'wb')  # open file in read binary mode
 
-        bone_name_per_alo_index = create_skeleton()
-        create_mesh(mesh_list, bone_name_per_alo_index)
-        create_connections(mesh_list)
+            bone_name_per_alo_index = create_skeleton()
+            create_mesh(mesh_list, bone_name_per_alo_index)
+            create_connections(mesh_list)
 
-        file.close()
-        file = None
-        #removeShadowDoubles()
-        hide(hiddenList)
-        hide_collections(bpy.context.scene.collection, collection_is_hidden_list, 0)
+            file.close()
+            file = None
+            #removeShadowDoubles()
+            hide(hiddenList)
+            hide_collections(bpy.context.scene.collection, collection_is_hidden_list, 0)
 
-        if(self.exportAnimations):
-            exportAnimations(path)
+            if(self.exportAnimations):
+                exportAnimations(path)
+        else:
+            print(f"Can't access {path = }")
+            with disable_exception_traceback():
+                raise Exception(f"ALAMO - EXPORT FAILED; no write permission for {file}.")
 
         return {'FINISHED'}  # this lets blender know the operator finished successfully.
 
