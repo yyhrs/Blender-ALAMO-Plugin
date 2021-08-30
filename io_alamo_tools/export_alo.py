@@ -1510,7 +1510,7 @@ class ALO_Exporter(bpy.types.Operator):
         else:
             print(f"Can't access {path = }")
             with disable_exception_traceback():
-                raise Exception(f"ALAMO - EXPORT FAILED; no write permission for {file}.")
+                raise Exception(f"ALAMO - EXPORT FAILED; can't write {os.path.split(path)[1]}")
 
         return {'FINISHED'}  # this lets blender know the operator finished successfully.
 

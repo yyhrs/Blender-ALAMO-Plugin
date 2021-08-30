@@ -449,7 +449,7 @@ class AnimationExporter():
             file = None
         else:
             with disable_exception_traceback():
-                raise Exception(f"ALAMO - EXPORT FAILED; no write permission for {file}.")
+                raise Exception(f"ALAMO - EXPORT FAILED; can't write {os.path.split(path)[1]}")
 
 class ALA_Exporter(bpy.types.Operator):
 
