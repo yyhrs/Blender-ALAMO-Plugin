@@ -1,7 +1,7 @@
 bl_info = {
     "name": "ALAMO Tools",
     "author": "Gaukler, evilbobthebob, inertial",
-    "version": (0, 0, 2, 5),
+    "version": (0, 0, 2, 6),
     "blender": (2, 93, 0),
     "category": "Import-Export"
 }
@@ -92,11 +92,9 @@ class keyframeProxyShow(bpy.types.Operator):
 
     def execute(self, context):
         bones = bpy.context.selected_pose_bones
-        arm = bpy.context.active_object.data
         for bone in bones:
-            arm.bones.active = bone.bone
             bone.proxyIsHiddenAnimation = False
-            bone.keyframe_insert(data_path="proxyIsHiddenAnimation")
+            bone.keyframe_insert(data_path="proxyIsHiddenAnimation", group=bone.name)
 
         for area in bpy.context.screen.areas:
             if area.type == 'DOPESHEET_EDITOR':
@@ -110,11 +108,9 @@ class keyframeProxyHide(bpy.types.Operator):
 
     def execute(self, context):
         bones = bpy.context.selected_pose_bones
-        arm = bpy.context.active_object.data
         for bone in bones:
-            arm.bones.active = bone.bone
             bone.proxyIsHiddenAnimation = True
-            bone.keyframe_insert(data_path="proxyIsHiddenAnimation")
+            bone.keyframe_insert(data_path="proxyIsHiddenAnimation", group=bone.name)
 
         for area in bpy.context.screen.areas:
             if area.type == 'DOPESHEET_EDITOR':
