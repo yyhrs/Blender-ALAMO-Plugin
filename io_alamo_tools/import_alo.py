@@ -1032,9 +1032,8 @@ class ALO_Importer(bpy.types.Operator):
 
             if(name in material_props):
                 return True
-            else:
-                self.report({"WARNING"}, "ALAMO - Unknown material porperty: " + name)
-                return False
+            self.report({"WARNING"}, "ALAMO - Unknown material porperty: " + name)
+            return False
 
         def read_int(material):
             file.seek(4, 1)  # skip size

@@ -65,11 +65,25 @@ class ALO_Exporter(bpy.types.Operator):
             default=True,
             )
 
+    # useObjectNames: EnumProperty(
+    #     name = "Use Object Names",
+    #     description = "Whether the exporter should use object or mesh names.",
+    #     items=(
+    #         ('OBJECT', "Object", ""),
+    #         ('MESH', "Mesh", ""),
+    #     ),
+    #     default = False,
+    # )
+
     def draw(self, context):
         layout = self.layout
 
         layout.prop(self, "exportAnimations")
         layout.prop(self, "exportHiddenObjects")
+
+        # row = layout.row()
+        # row.use_property_split = False
+        # row.prop('useObjectNames', "mode", text="", expand=True, icon_only=False)
 
     def execute(self, context):  # execute() is called by blender when running the operator.
 
@@ -1311,6 +1325,10 @@ class ALO_Exporter(bpy.types.Operator):
             bpy.ops.mesh.select_all(action='DESELECT')
             bpy.ops.mesh.select_non_manifold()
 
+        def exportFailed():
+            with disable_exception_traceback():
+                raise Exception('ALAMO - EXPORT FAILED')
+
         def checkShadowMesh(mesh_list):  #checks if shadow meshes are correct and checks if material is missing
             for object in mesh_list:
                 if len(object.data.materials) > 0:
@@ -1482,8 +1500,7 @@ class ALO_Exporter(bpy.types.Operator):
         
         for error in has_errors:
             if error:
-                with disable_exception_traceback():
-                    raise Exception('ALAMO - EXPORT FAILED')
+                exportFailed()
 
         hiddenList = unhide()
         collection_is_hidden_list = unhide_collections(bpy.context.scene.collection)
@@ -1492,7 +1509,6 @@ class ALO_Exporter(bpy.types.Operator):
 
         global file
         if os.access(path, os.W_OK):
-            print(f"Accessing {path = }")
             file = open(path, 'wb')  # open file in read binary mode
 
             bone_name_per_alo_index = create_skeleton()
@@ -1508,9 +1524,8 @@ class ALO_Exporter(bpy.types.Operator):
             if(self.exportAnimations):
                 exportAnimations(path)
         else:
-            print(f"Can't access {path = }")
-            with disable_exception_traceback():
-                raise Exception(f"ALAMO - EXPORT FAILED; can't write {os.path.split(path)[1]}")
+            self.report({"ERROR"}, f'ALAMO - Could not write to {os.path.split(path)[1]}')
+            exportFailed()
 
         return {'FINISHED'}  # this lets blender know the operator finished successfully.
 
