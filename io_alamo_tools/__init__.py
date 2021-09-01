@@ -85,20 +85,31 @@ class createConstraintBoneButton(bpy.types.Operator):
 #             bone.keyframe_insert(data_path="proxyIsHiddenAnimation")
 #         return {'FINISHED'}
 
+def keyframeProxySet(operation):
+    bones = bpy.context.selected_pose_bones
+
+    for bone in bones:
+        if operation == 'SHOW':
+            bone.proxyIsHiddenAnimation = False
+        if operation == 'HIDE':
+            bone.proxyIsHiddenAnimation = True
+
+        if operation == 'REMOVE':
+            bone.keyframe_delete(data_path="proxyIsHiddenAnimation")
+        else:
+            bone.keyframe_insert(data_path="proxyIsHiddenAnimation", group=bone.name)
+
+    for area in bpy.context.screen.areas:
+        if area.type == 'DOPESHEET_EDITOR':
+            area.tag_redraw()
+        
 class keyframeProxyShow(bpy.types.Operator):
     bl_idname = "alamo.show_keyframe_proxy"
     bl_label = "Show"
     bl_description = "Create a keyframe and set proxyIsHiddenAnimation to False for all selected bones"
 
     def execute(self, context):
-        bones = bpy.context.selected_pose_bones
-        for bone in bones:
-            bone.proxyIsHiddenAnimation = False
-            bone.keyframe_insert(data_path="proxyIsHiddenAnimation", group=bone.name)
-
-        for area in bpy.context.screen.areas:
-            if area.type == 'DOPESHEET_EDITOR':
-                area.tag_redraw()
+        keyframeProxySet('SHOW')
         return {'FINISHED'}
 
 class keyframeProxyHide(bpy.types.Operator):
@@ -107,29 +118,16 @@ class keyframeProxyHide(bpy.types.Operator):
     bl_description = "Create a keyframe and set proxyIsHiddenAnimation to True for all selected bones"
 
     def execute(self, context):
-        bones = bpy.context.selected_pose_bones
-        for bone in bones:
-            bone.proxyIsHiddenAnimation = True
-            bone.keyframe_insert(data_path="proxyIsHiddenAnimation", group=bone.name)
-
-        for area in bpy.context.screen.areas:
-            if area.type == 'DOPESHEET_EDITOR':
-                area.tag_redraw()
+        keyframeProxySet('HIDE')
         return {'FINISHED'}
 
 class keyframeProxyRemove(bpy.types.Operator):
     bl_idname = "alamo.remove_keyframe_proxy"
     bl_label = "Remove"
-    bl_description = "Remove keyframes from all selected bones"
+    bl_description = "Remove active keyframes from all selected bones"
 
     def execute(self, context):
-        bones = bpy.context.selected_pose_bones
-        for bone in bones:
-            bone.keyframe_delete(data_path="proxyIsHiddenAnimation")
-            
-        for area in bpy.context.screen.areas:
-            if area.type == 'DOPESHEET_EDITOR':
-                area.tag_redraw()
+        keyframeProxySet('REMOVE')
         return {'FINISHED'}
 
 def skeletonEnumCallback(scene, context):
@@ -186,12 +184,12 @@ class ALAMO_PT_ToolsPanel(bpy.types.Panel):
 
         bones = bpy.context.selected_pose_bones
         if bpy.context.mode == 'POSE' and len(bones) > 0:
-            col = layout.column(align=True)
-            col.operator('alamo.show_keyframe_proxy', text = "Show",
+            row = layout.row(align=True)
+            row.operator('alamo.show_keyframe_proxy', text = "Show",
                             icon="HIDE_OFF")
-            col.operator('alamo.hide_keyframe_proxy', text = "Hide",
+            row.operator('alamo.hide_keyframe_proxy', text = "Hide",
                             icon="HIDE_ON")
-            col.operator('alamo.remove_keyframe_proxy', text = "Remove",
+            row.operator('alamo.remove_keyframe_proxy', text = "",
                             icon="X")
 
         bone = bpy.context.active_bone
