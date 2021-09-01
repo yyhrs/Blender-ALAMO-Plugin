@@ -61,43 +61,53 @@ class createConstraintBoneButton(bpy.types.Operator):
         bpy.context.view_layer.objects.active = object
         return {'FINISHED'}
 
-# class ProxyShow(bpy.types.Operator):
-#     bl_idname = "alamo.show_proxy"
-#     bl_label = "Show"
-#     bl_description = "Create a keyframe and set proxyIsHiddenAnimation to False for all selected bones"
+class ProxyShow(bpy.types.Operator):
+    bl_idname = "alamo.show_proxy"
+    bl_label = "Show"
+    bl_description = "Set proxyIsHidden to False for all selected bones"
 
-#     def execute(self, context):
-#         bones = bpy.context.selected_pose_bones
-#         for bone in bones:
-#             bone.proxyIsHiddenAnimation = False
-#             bone.keyframe_insert(data_path="proxyIsHiddenAnimation")
-#         return {'FINISHED'}
+    @classmethod
+    def poll(cls, context):
+        return len(bpy.context.selected_bones) > 0
 
-# class ProxyHide(bpy.types.Operator):
-#     bl_idname = "alamo.hide_proxy"
-#     bl_label = "Hide"
-#     bl_description = "Create a keyframe and set proxyIsHiddenAnimation to True for all selected bones"
+    def execute(self, context):
+        bones = bpy.context.selected_bones
+        for bone in bones:
+            bone.proxyIsHidden = False
+        return {'FINISHED'}
 
-#     def execute(self, context):
-#         bones = bpy.context.selected_pose_bones
-#         for bone in bones:
-#             bone.proxyIsHiddenAnimation = True
-#             bone.keyframe_insert(data_path="proxyIsHiddenAnimation")
-#         return {'FINISHED'}
+class ProxyHide(bpy.types.Operator):
+    bl_idname = "alamo.hide_proxy"
+    bl_label = "Hide"
+    bl_description = "Set proxyIsHidden to True for all selected bones"
+
+    @classmethod
+    def poll(cls, context):
+        return len(bpy.context.selected_bones) > 0
+
+    def execute(self, context):
+        bones = bpy.context.selected_bones
+        for bone in bones:
+            bone.proxyIsHidden = True
+        return {'FINISHED'}
 
 def keyframeProxySet(operation):
     bones = bpy.context.selected_pose_bones
+    keyframeType = ""
 
     for bone in bones:
         if operation == 'SHOW':
             bone.proxyIsHiddenAnimation = False
+            keyframeType = 'JITTER'
         if operation == 'HIDE':
             bone.proxyIsHiddenAnimation = True
+            keyframeType = 'EXTREME'
 
         if operation == 'REMOVE':
             bone.keyframe_delete(data_path="proxyIsHiddenAnimation")
         else:
             bone.keyframe_insert(data_path="proxyIsHiddenAnimation", group=bone.name)
+            bone.keyframe_type = keyframeType
 
     for area in bpy.context.screen.areas:
         if area.type == 'DOPESHEET_EDITOR':
@@ -108,6 +118,10 @@ class keyframeProxyShow(bpy.types.Operator):
     bl_label = "Show"
     bl_description = "Create a keyframe and set proxyIsHiddenAnimation to False for all selected bones"
 
+    @classmethod
+    def poll(cls, context):
+        return len(bpy.context.selected_pose_bones) > 0
+
     def execute(self, context):
         keyframeProxySet('SHOW')
         return {'FINISHED'}
@@ -117,6 +131,10 @@ class keyframeProxyHide(bpy.types.Operator):
     bl_label = "Hide"
     bl_description = "Create a keyframe and set proxyIsHiddenAnimation to True for all selected bones"
 
+    @classmethod
+    def poll(cls, context):
+        return len(bpy.context.selected_pose_bones) > 0
+
     def execute(self, context):
         keyframeProxySet('HIDE')
         return {'FINISHED'}
@@ -125,6 +143,10 @@ class keyframeProxyRemove(bpy.types.Operator):
     bl_idname = "alamo.remove_keyframe_proxy"
     bl_label = "Remove"
     bl_description = "Remove active keyframes from all selected bones"
+
+    @classmethod
+    def poll(cls, context):
+        return len(bpy.context.selected_pose_bones) > 0
 
     def execute(self, context):
         keyframeProxySet('REMOVE')
@@ -149,7 +171,20 @@ class skeletonEnumClass(PropertyGroup):
 
 class ALAMO_PT_ToolsPanel(bpy.types.Panel):
 
-    bl_label = "ALAMO properties"
+    bl_label = "Alamo Properties"
+    bl_idname = "ALAMO_PT_ToolsPanel"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "ALAMO"
+
+    def draw(self, context):
+        # self.layout.separator()
+        pass
+
+class ALAMO_PT_ObjectPanel(bpy.types.Panel):
+
+    bl_label = "Object Tools"
+    bl_parent_id = 'ALAMO_PT_ToolsPanel'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = "ALAMO"
@@ -158,54 +193,76 @@ class ALAMO_PT_ToolsPanel(bpy.types.Panel):
         object = context.object
         layout = self.layout
         scene = context.scene
-        c = layout.column()
+        col = layout.column()
 
-        c.prop(scene.ActiveSkeleton, 'skeletonEnum')
+        col.prop(scene.ActiveSkeleton, 'skeletonEnum')
+        col.prop(object, "HasCollision")
+        col.prop(object, "Hidden")
 
-        if type(object) != type(None):
-            if(object.type == 'MESH'):
-                if bpy.context.mode == 'OBJECT':
-                    c.prop(object, "HasCollision")
-                    c.prop(object, "Hidden")
+        armature = utils.findArmature()
+        if armature is not None:
+            hasChildConstraint = any(
+                constraint.type == 'CHILD_OF'
+                for constraint in object.constraints
+            )
 
-                    armature = utils.findArmature()
-                    if armature != None:
-                        hasChildConstraint = False
-                        for constraint in object.constraints:
-                            if constraint.type == 'CHILD_OF':
-                                hasChildConstraint = True
-                        if not hasChildConstraint:
-                            self.layout.operator("create.constraint_bone", text = 'Create Constraint Bone')
+            if not hasChildConstraint:
+                self.layout.operator("create.constraint_bone", text = 'Create Constraint Bone')
 
-            action = utils.getCurrentAction()
-            if(action != None):
-                c.prop(action, "AnimationEndFrame")
+        for action in bpy.data.actions:
+            row = col.row()
+            row.label(text = action.name)
+            row.prop(action, "AnimationEndFrame")
 
+class ALAMO_PT_EditBonePanel(bpy.types.Panel):
 
-        bones = bpy.context.selected_pose_bones
-        if bpy.context.mode == 'POSE' and len(bones) > 0:
-            row = layout.row(align=True)
-            row.operator('alamo.show_keyframe_proxy', text = "Show",
-                            icon="HIDE_OFF")
-            row.operator('alamo.hide_keyframe_proxy', text = "Hide",
-                            icon="HIDE_ON")
-            row.operator('alamo.remove_keyframe_proxy', text = "",
-                            icon="X")
+    bl_label = "Edit Bone Tools"
+    bl_parent_id = 'ALAMO_PT_ToolsPanel'
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "ALAMO"
 
+    def draw(self, context):
+        self.layout.active = False
+        if bpy.context.mode == "EDIT_ARMATURE":
+            self.layout.active = True
+        col = self.layout.column()
         bone = bpy.context.active_bone
-        if type(bone) != type(None):
-            if(type(bpy.context.active_bone ) is bpy.types.EditBone):
-                c.prop(bone.billboardMode, "billboardMode")
-                c.prop(bone, "Visible")
-                c.prop(bone, "EnableProxy")
-                if bone.EnableProxy:
-                    c.prop(bone, "proxyIsHidden")
-                    c.prop(bone, "altDecreaseStayHidden")
-                    c.prop(bone, "ProxyName")
+        col.prop(bone.billboardMode, "billboardMode")
+        col.prop(bone, "Visible")
+        col.prop(bone, "EnableProxy")
+        if bone.EnableProxy:
+            row = self.layout.row(align=True)
+            row.label(text="Proxy Visibility:")
+            row.operator('alamo.show_proxy', text = "",
+                            icon="HIDE_OFF")
+            row.operator('alamo.hide_proxy', text = "",
+                            icon="HIDE_ON")
+            col.prop(bone, "proxyIsHidden")
+            col.prop(bone, "altDecreaseStayHidden")
+            col.prop(bone, "ProxyName")
 
-            # elif (type(bpy.context.active_bone) is bpy.types.Bone and bpy.context.mode == 'POSE'):
-            #     poseBone = object.pose.bones[bone.name]
-            #     c.prop(poseBone, "proxyIsHiddenAnimation")
+class ALAMO_PT_PoseBonePanel(bpy.types.Panel):
+
+    bl_label = "Pose Tools"
+    bl_parent_id = 'ALAMO_PT_ToolsPanel'
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "ALAMO"
+
+    def draw(self, context):
+        layout = self.layout
+        layout.active = False
+        if bpy.context.mode == "POSE":
+            layout.active = True
+        layout.column().label(text="Keyframe Proxy Visibility:")
+        row = layout.row(align=True)
+        row.operator('alamo.show_keyframe_proxy', text = "Show",
+                        icon="HIDE_OFF")
+        row.operator('alamo.hide_keyframe_proxy', text = "Hide",
+                        icon="HIDE_ON")
+        row.operator('alamo.remove_keyframe_proxy', text = "",
+                        icon="X")
 
 class ALAMO_PT_materialPropertyPanel(bpy.types.Panel):
     bl_label = "Alamo material properties"
@@ -218,48 +275,26 @@ class ALAMO_PT_materialPropertyPanel(bpy.types.Panel):
         layout = self.layout
         c = layout.column()
 
-        if type(object) != type(None):
-            if(object.type == 'MESH'):
+        if type(object) != type(None) and object.type == 'MESH':
                 material = bpy.context.active_object.active_material
-                if (material != None):
+                if material is not None:
                     #a None image is needed to represent not using a texture
                     if 'None' not in bpy.data.images:
                         bpy.data.images.new(name='None', width=1, height=1)
                     c.prop(material.shaderList, "shaderList")
-                    shaderProps = settings.material_parameter_dict[material.shaderList.shaderList]
                     if material.shaderList.shaderList != 'alDefault.fx':
-                        for property in shaderProps:
-                            if property == 'BaseTexture':
-                                layout.prop_search(material, "BaseTexture", bpy.data, "images")
-                            elif property == 'CloudTexture':
-                                layout.prop_search(material, "CloudTexture", bpy.data, "images")
-                            elif property == 'DetailTexture':
-                                layout.prop_search(material, "DetailTexture", bpy.data, "images")
-                            elif property == 'CloudNormalTexture':
-                                layout.prop_search(material, "CloudNormalTexture", bpy.data, "images")
-                            elif property == 'NormalTexture':
-                                layout.prop_search(material, "NormalTexture", bpy.data, "images")
-                            elif property == 'NormalDetailTexture':
-                                layout.prop_search(material, "NormalDetailTexture", bpy.data, "images")
-                            elif property == 'GlossTexture':
-                                layout.prop_search(material, "GlossTexture", bpy.data, "images")
-                            elif property == 'WaveTexture':
-                                layout.prop_search(material, "WaveTexture", bpy.data, "images")
-                            elif property == 'DistortionTexture':
-                                layout.prop_search(material, "DistortionTexture", bpy.data, "images")
+                        shader_props = settings.material_parameter_dict[material.shaderList.shaderList]
+                        for shader_prop in shader_props:
+                            if shader_prop.find('Texture') > -1:
+                                layout.prop_search(material, shader_prop, bpy.data, "images")
                             else:
-                                c.prop(material, property)
-
-def createShaderModeOptions():
-    mode_options = []
-
-    for index, shader_name in enumerate(settings.material_parameter_dict):
-        mode_options.append((shader_name, shader_name, '', '', index))
-
-    return mode_options
+                                c.prop(material, shader_prop)
 
 class shaderListProperties(bpy.types.PropertyGroup):
-    mode_options = createShaderModeOptions()
+    mode_options = [
+        (shader_name, shader_name, '', '', index)
+        for index, shader_name in enumerate(settings.material_parameter_dict)
+    ]
 
     shaderList : bpy.props.EnumProperty(
         items=mode_options,
@@ -313,10 +348,15 @@ classes = (
     ALA_Exporter,
     ALAMO_PT_materialPropertyPanel,
     createConstraintBoneButton,
+    ProxyShow,
+    ProxyHide,
     keyframeProxyShow,
     keyframeProxyHide,
     keyframeProxyRemove,
-    ALAMO_PT_ToolsPanel
+    ALAMO_PT_ToolsPanel,
+    ALAMO_PT_ObjectPanel,
+    ALAMO_PT_EditBonePanel,
+    ALAMO_PT_PoseBonePanel
 )
 
 def register():
