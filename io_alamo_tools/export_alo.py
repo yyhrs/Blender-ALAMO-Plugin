@@ -65,25 +65,28 @@ class ALO_Exporter(bpy.types.Operator):
             default=True,
             )
 
-    # useObjectNames: EnumProperty(
-    #     name = "Use Object Names",
-    #     description = "Whether the exporter should use object or mesh names.",
-    #     items=(
-    #         ('OBJECT', "Object", ""),
-    #         ('MESH', "Mesh", ""),
-    #     ),
-    #     default = False,
-    # )
+    useNamesFrom: EnumProperty(
+        name = "Use Names From",
+        description = "Whether the exporter should use object or mesh names.",
+        items=(
+            ('MESH', "Mesh", ""),
+            ('OBJECT', "Object", ""),
+        ),
+        default = 'MESH',
+    )
 
     def draw(self, context):
         layout = self.layout
+        layout.use_property_split = True
 
-        layout.prop(self, "exportAnimations")
-        layout.prop(self, "exportHiddenObjects")
+        row = layout.row()
+        row.prop(self, "exportAnimations")
+        row = layout.row()
+        row.prop(self, "exportHiddenObjects")
 
-        # row = layout.row()
-        # row.use_property_split = False
-        # row.prop('useObjectNames', "mode", text="", expand=True, icon_only=False)
+        row = layout.row(heading="Names From")
+        row.use_property_split = False
+        row.prop(self, "useNamesFrom", expand = True)
 
     def execute(self, context):  # execute() is called by blender when running the operator.
 
@@ -1434,6 +1437,9 @@ class ALO_Exporter(bpy.types.Operator):
 
             for object in collection.objects:
                 if(object.type == 'MESH' and (object.hide_viewport == False or self.exportHiddenObjects)):
+                    if self.useNamesFrom == 'OBJECT':
+                        object.data.name = object.name
+
                     export_list.append(object)
 
             for child in collection.children:
@@ -1487,9 +1493,9 @@ class ALO_Exporter(bpy.types.Operator):
 
         mesh_list = create_export_list(bpy.context.scene.collection)
 
+        #check if export objects satisfy requirements (has material, UVs, ...)
         has_errors = []
 
-        #check if export objects satisfy requirements (has material, UVs, ...)
         has_errors.append(checkShadowMesh(mesh_list))
         has_errors.append(checkUV(mesh_list))
         has_errors.append(checkFaceNumber(mesh_list))
