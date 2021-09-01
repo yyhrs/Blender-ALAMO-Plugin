@@ -37,7 +37,7 @@ def disable_exception_traceback():
     sys.tracebacklimit = default_value  # revert changes
 
 
-class ALO_Exporter(bpy.types.Operator):
+class ALO_Exporter(bpy.types.Operator, ExportHelper):
 
     """ALO Exporter"""  # blender will use this as a tooltip for menu items and buttons.
     bl_idname = "export.alo"  # unique identifier for buttons and menu items to reference.
