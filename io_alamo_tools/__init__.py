@@ -68,7 +68,9 @@ class ProxyShow(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return len(bpy.context.selected_bones) > 0
+        if bpy.context.selected_bones is not None:
+            return len(bpy.context.selected_bones) > 0
+        return False
 
     def execute(self, context):
         bones = bpy.context.selected_bones
@@ -83,7 +85,9 @@ class ProxyHide(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return len(bpy.context.selected_bones) > 0
+        if bpy.context.selected_bones is not None:
+            return len(bpy.context.selected_bones) > 0
+        return False
 
     def execute(self, context):
         bones = bpy.context.selected_bones
@@ -120,7 +124,9 @@ class keyframeProxyShow(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return len(bpy.context.selected_pose_bones) > 0
+        if bpy.context.selected_pose_bones is not None:
+            return len(bpy.context.selected_pose_bones) > 0
+        return False
 
     def execute(self, context):
         keyframeProxySet('SHOW')
@@ -133,7 +139,9 @@ class keyframeProxyHide(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return len(bpy.context.selected_pose_bones) > 0
+        if bpy.context.selected_pose_bones is not None:
+            return len(bpy.context.selected_pose_bones) > 0
+        return False
 
     def execute(self, context):
         keyframeProxySet('HIDE')
@@ -146,7 +154,9 @@ class keyframeProxyRemove(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return len(bpy.context.selected_pose_bones) > 0
+        if bpy.context.selected_pose_bones is not None:
+            return len(bpy.context.selected_pose_bones) > 0
+        return False
 
     def execute(self, context):
         keyframeProxySet('REMOVE')
@@ -264,8 +274,30 @@ class ALAMO_PT_PoseBonePanel(bpy.types.Panel):
         row.operator('alamo.remove_keyframe_proxy', text = "",
                         icon="X")
 
+class ALAMO_PT_materialPropertySubPanel(bpy.types.Panel):
+    bl_label = "Additional Properties"
+    bl_parent_id = "ALAMO_PT_materialPropertyPanel"
+    bl_space_type = "PROPERTIES"
+    bl_region_type = "WINDOW"
+    bl_context = "material"
+    bl_options = {'DEFAULT_CLOSED'}
+
+    def draw(self, context):
+        object = context.object
+        layout = self.layout
+        c = layout.column()
+
+        if type(object) != type(None) and object.type == 'MESH':
+                material = bpy.context.active_object.active_material
+                if material is not None and material.shaderList.shaderList != 'alDefault.fx':
+                        shader_props = settings.material_parameter_dict[material.shaderList.shaderList]
+                        for shader_prop in shader_props:
+                            if shader_prop.find('Texture') == -1: # because contains() doesn't exist, apparently
+                                c.prop(material, shader_prop)
+
 class ALAMO_PT_materialPropertyPanel(bpy.types.Panel):
-    bl_label = "Alamo material properties"
+    bl_label = "Alamo Material Properties"
+    bl_id = "ALAMO_PT_materialPropertyPanel"
     bl_space_type = "PROPERTIES"
     bl_region_type = "WINDOW"
     bl_context = "material"
@@ -285,10 +317,8 @@ class ALAMO_PT_materialPropertyPanel(bpy.types.Panel):
                     if material.shaderList.shaderList != 'alDefault.fx':
                         shader_props = settings.material_parameter_dict[material.shaderList.shaderList]
                         for shader_prop in shader_props:
-                            if shader_prop.find('Texture') > -1:
+                            if shader_prop.find('Texture') > -1: # because contains() doesn't exist, apparently
                                 layout.prop_search(material, shader_prop, bpy.data, "images")
-                            else:
-                                c.prop(material, shader_prop)
 
 class shaderListProperties(bpy.types.PropertyGroup):
     mode_options = [
@@ -347,6 +377,7 @@ classes = (
     ALO_Exporter,
     ALA_Exporter,
     ALAMO_PT_materialPropertyPanel,
+    ALAMO_PT_materialPropertySubPanel,
     createConstraintBoneButton,
     ProxyShow,
     ProxyHide,
