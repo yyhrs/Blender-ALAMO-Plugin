@@ -1514,7 +1514,7 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
         path = self.properties.filepath
 
         global file
-        if os.access(path, os.W_OK):
+        if os.access(path, os.W_OK) or not os.access(path, os.F_OK):
             file = open(path, 'wb')  # open file in read binary mode
 
             bone_name_per_alo_index = create_skeleton()
