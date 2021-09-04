@@ -284,6 +284,8 @@ class ProxyHide(bpy.types.Operator):
 
 def keyframeProxySet(operation):
     bones = bpy.context.selected_pose_bones
+    action = bpy.context.object.animation_data.action
+    frame = bpy.context.scene.frame_current
     keyframeType = ""
 
     for bone in bones:
@@ -297,9 +299,10 @@ def keyframeProxySet(operation):
         if operation == 'REMOVE':
             bone.keyframe_delete(data_path="proxyIsHiddenAnimation")
         else:
-            bone.keyframe_insert(
-                data_path="proxyIsHiddenAnimation", group=bone.name)
-            bone.keyframe_type = keyframeType
+            bone.keyframe_insert(data_path="proxyIsHiddenAnimation", group=bone.name)
+            for keyframe in action.fcurves.find(bone.path_from_id() + ".proxyIsHiddenAnimation").keyframe_points:
+                if int(keyframe.co[0]) == frame:
+                    keyframe.type = keyframeType
 
     for area in bpy.context.screen.areas:
         if area.type == 'DOPESHEET_EDITOR':
@@ -577,8 +580,8 @@ class ALAMO_PT_materialPropertyPanel(bpy.types.Panel):
                     for shader_prop in shader_props:
                         # because contains() doesn't exist, apparently
                         if shader_prop.find('Texture') > -1:
-                            layout.prop_search(
-                                material, shader_prop, bpy.data, "images")
+                            layout.prop_search(material, shader_prop, bpy.data, "images")
+                            # layout.template_ID(material, shader_prop, new="image.new", open="image.open")
 
 
 class ALAMO_PT_materialPropertySubPanel(bpy.types.Panel):
