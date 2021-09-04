@@ -401,24 +401,40 @@ class ALAMO_PT_ObjectPanel(bpy.types.Panel):
         object = context.object
         layout = self.layout
         scene = context.scene
-        col = layout.column()
         layout.active = False
         if bpy.context.mode == "OBJECT":
             layout.active = True
 
-        row = col.row(align=True)
+        row = layout.row(align=True)
         row.label(text="Set HasCollision:")
         row.operator('alamo.collision_true', text="", icon="CHECKMARK")
         row.operator('alamo.collision_false', text="", icon="X")
 
-        row = col.row(align=True)
+        row = layout.row(align=True)
         row.label(text="Set Hidden:")
         row.operator('alamo.hidden_true', text="", icon="HIDE_OFF")
         row.operator('alamo.hidden_false', text="", icon="HIDE_ON")
 
-        col.prop(scene.ActiveSkeleton, 'skeletonEnum')
+
+class ALAMO_PT_ArmatureSettingsPanel(bpy.types.Panel):
+
+    bl_label = "Armature Settings"
+    bl_parent_id = 'ALAMO_PT_ToolsPanel'
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "ALAMO"
+
+    def draw(self, context):
+        object = context.object
+        layout = self.layout
+        scene = context.scene
+        # layout.active = False
+
+        layout.prop(scene.ActiveSkeleton, 'skeletonEnum')
 
         armature = utils.findArmature()
+        createConstraintBone = self.layout.operator("create.constraint_bone", text='Create Constraint Bone')
+        createConstraintBone.active = False
         if armature is not None:
             hasChildConstraint = any(
                 constraint.type == 'CHILD_OF'
@@ -426,13 +442,7 @@ class ALAMO_PT_ObjectPanel(bpy.types.Panel):
             )
 
             if not hasChildConstraint:
-                self.layout.operator(
-                    "create.constraint_bone", text='Create Constraint Bone')
-
-        for action in bpy.data.actions:
-            row = col.row()
-            row.label(text=action.name)
-            row.prop(action, "AnimationEndFrame")
+                createConstraintBone.active = True
 
 
 class ALAMO_PT_EditBonePanel(bpy.types.Panel):
@@ -499,42 +509,40 @@ class ALAMO_PT_EditBoneSubPanel(bpy.types.Panel):
 
     def draw(self, context):
         bones = bpy.context.selected_bones
-        col = self.layout.column()
+        layout = self.layout
         all_same = True
 
-        col.active = False
+        layout.active = False
         if bpy.context.mode == "EDIT_ARMATURE":
-            col.active = True
+            if bones is not None:
+                has_changed = None
+                for bone in bones:
+                    if has_changed is None:
+                        has_changed = bone.EnableProxy
+                    elif bone.EnableProxy != has_changed:
+                        all_same = False
+                        break
 
-        if bones is not None:
-            has_changed = None
-            for bone in bones:
-                if has_changed is None:
-                    has_changed = bone.EnableProxy
-                elif bone.EnableProxy != has_changed:
-                    all_same = False
-                    break
-
-        col.active = all_same
+            layout.active = all_same
         
         if not all_same:
-            col.label(icon="ERROR", text="Inconsistent EnableProxy states.")
-            col.label(icon="BLANK1", text="Change selection or set EnableProxy.")
+            layout.label(icon="ERROR", text="Inconsistent EnableProxy states.")
+            layout.label(icon="BLANK1", text="Change selection or set EnableProxy.")
 
-        row = col.row(align=True)
+        row = layout.row(align=True)
         row.label(text="Set Proxy Visibility:")
         row.operator('alamo.show_proxy', text="", icon="HIDE_OFF")
         row.operator('alamo.hide_proxy', text="", icon="HIDE_ON")
 
-        row = col.row(align=True)
+        row = layout.row(align=True)
         row.label(text="Set altDecreaseStayHidden:")
         row.operator('alamo.alt_decrease_stay_hidden_true', text="", icon="CHECKMARK")
         row.operator('alamo.alt_decrease_stay_hidden_false', text="", icon="X")
 
 
-class ALAMO_PT_PoseBonePanel(bpy.types.Panel):
+class ALAMO_PT_AnimationPanel(bpy.types.Panel):
 
-    bl_label = "Pose Tools"
+    bl_label = "Animation"
     bl_parent_id = 'ALAMO_PT_ToolsPanel'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
@@ -554,6 +562,12 @@ class ALAMO_PT_PoseBonePanel(bpy.types.Panel):
                      icon="HIDE_ON")
         row.operator('alamo.remove_keyframe_proxy', text="",
                      icon="X")
+
+        box = layout.box()
+        box.label(text="Action End Frames:")
+
+        for action in bpy.data.actions:
+            box.prop(action, "AnimationEndFrame", text=action.name)
 
 
 class ALAMO_PT_materialPropertyPanel(bpy.types.Panel):
@@ -582,6 +596,59 @@ class ALAMO_PT_materialPropertyPanel(bpy.types.Panel):
                         if shader_prop.find('Texture') > -1:
                             layout.prop_search(material, shader_prop, bpy.data, "images")
                             # layout.template_ID(material, shader_prop, new="image.new", open="image.open")
+
+
+class ALAMO_PT_DebugPanel(bpy.types.Panel):
+
+    bl_label = "Debug"
+    bl_parent_id = 'ALAMO_PT_ToolsPanel'
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "ALAMO"
+    bl_options = {'DEFAULT_CLOSED'}
+
+    def draw(self, context):
+        object = context.object
+        layout = self.layout
+        scene = context.scene
+        c = layout.column()
+
+        c.prop(scene.ActiveSkeleton, 'skeletonEnum')
+
+        if type(object) != type(None):
+            if(object.type == 'MESH'):
+                if bpy.context.mode == 'OBJECT':
+                    c.prop(object, "HasCollision")
+                    c.prop(object, "Hidden")
+
+                    armature = utils.findArmature()
+                    if armature != None:
+                        hasChildConstraint = False
+                        for constraint in object.constraints:
+                            if constraint.type == 'CHILD_OF':
+                                hasChildConstraint = True
+                        if not hasChildConstraint:
+                            self.layout.operator("create.constraint_bone", text = 'Create Constraint Bone')
+
+            action = utils.getCurrentAction()
+            if(action != None):
+                c.prop(action, "AnimationEndFrame")
+
+
+        bone = bpy.context.active_bone
+        if type(bone) != type(None):
+            if(type(bpy.context.active_bone ) is bpy.types.EditBone):
+                c.prop(bone.billboardMode, "billboardMode")
+                c.prop(bone, "Visible")
+                c.prop(bone, "EnableProxy")
+                if bone.EnableProxy:
+                    c.prop(bone, "proxyIsHidden")
+                    c.prop(bone, "altDecreaseStayHidden")
+                    c.prop(bone, "ProxyName")
+
+            elif (type(bpy.context.active_bone) is bpy.types.Bone and bpy.context.mode == 'POSE'):
+                poseBone = object.pose.bones[bone.name]
+                c.prop(poseBone, "proxyIsHiddenAnimation")
 
 
 class ALAMO_PT_materialPropertySubPanel(bpy.types.Panel):
@@ -688,9 +755,11 @@ classes = (
     keyframeProxyRemove,
     ALAMO_PT_ToolsPanel,
     ALAMO_PT_ObjectPanel,
+    ALAMO_PT_ArmatureSettingsPanel,
     ALAMO_PT_EditBonePanel,
     ALAMO_PT_EditBoneSubPanel,
-    ALAMO_PT_PoseBonePanel
+    ALAMO_PT_AnimationPanel,
+    ALAMO_PT_DebugPanel
 )
 
 
