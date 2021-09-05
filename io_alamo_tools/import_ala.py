@@ -353,8 +353,7 @@ def validate(data):
                 break
         if(fitting):
             return True
-        self.report({"WARNING"}, "animation bones not matching active armature")
-        return False
+        raise Exception("animation bones not matching active armature")
 
 class AnimationImporter():
     def loadAnimation(self, filePath):

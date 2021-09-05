@@ -31,101 +31,116 @@ def selectNonManifoldVertices(object):
     bpy.ops.mesh.select_non_manifold()
 
 # checks if shadow meshes are correct and checks if material is missing
-def checkShadowMesh(mesh_list):
+def checkShadowMesh(object):
     error = []
-    for object in mesh_list:
-        if len(object.data.materials) > 0:
-            shader = object.data.materials[0].shaderList.shaderList
-            if shader in ['MeshShadowVolume.fx', 'RSkinShadowVolume.fx']:
-                bm = bmesh.new()  # create an empty BMesh
-                bm.from_mesh(object.data)  # fill it in from a Mesh
-                bm.verts.ensure_lookup_table()
+    if len(object.data.materials) > 0:
+        shader = object.data.materials[0].shaderList.shaderList
+        if shader in ['MeshShadowVolume.fx', 'RSkinShadowVolume.fx']:
+            bm = bmesh.new()  # create an empty BMesh
+            bm.from_mesh(object.data)  # fill it in from a Mesh
+            bm.verts.ensure_lookup_table()
 
-                for vertex in bm.verts:
-                    if not vertex.is_manifold:
-                        bm.free()
-                        selectNonManifoldVertices(object)
-                        error += [f'ALAMO - Non manifold geometry shadow mesh: {object.name}']
-                        break
+            for vertex in bm.verts:
+                if not vertex.is_manifold:
+                    bm.free()
+                    selectNonManifoldVertices(object)
+                    error += [f'ALAMO - Non manifold geometry shadow mesh: {object.name}']
+                    break
 
-                for edge in bm.edges:
-                    if len(edge.link_faces) < 2:
-                        bm.free()
-                        selectNonManifoldVertices(object)
-                        error += [f'ALAMO - Non manifold geometry shadow mesh: {object.name}']
-                        break
+            for edge in bm.edges:
+                if len(edge.link_faces) < 2:
+                    bm.free()
+                    selectNonManifoldVertices(object)
+                    error += [f'ALAMO - Non manifold geometry shadow mesh: {object.name}']
+                    break
 
-                bm.free()
-        else:
-            error += [f'ALAMO - Missing material on object: {object.name}']
+            bm.free()
+    else:
+        error += [f'ALAMO - Missing material on object: {object.name}']
 
     return error
 
-def checkUV(mesh_list):  # throws error if object lacks UVs
+def checkUV(object):  # throws error if object lacks UVs
     error = []
-    for object in mesh_list:
-        for material in object.data.materials:
-            if material.shaderList.shaderList == 'MeshShadowVolume.fx' or material.shaderList.shaderList == 'RSkinShadowVolume.fx':
-                if len(object.data.materials) > 1:
-                    error += [f'ALAMO - Multiple materials on shadow volume: {object.name}; remove additional materials']
-            if object.HasCollision:
-                if len(object.data.materials) > 1:
-                    error += [f'ALAMO - Multiple submeshes/materials on collision mesh: {object.name}; remove additional materials']
-        if object.data.uv_layers:  # or material.shaderList.shaderList in settings.no_UV_Shaders:  #currently UVs are needed for everything but shadows
-            continue
-        else:
-            error += [f'ALAMO - Missing UV: {object.name}']
+    for material in object.data.materials:
+        if material.shaderList.shaderList == 'MeshShadowVolume.fx' or material.shaderList.shaderList == 'RSkinShadowVolume.fx':
+            if len(object.data.materials) > 1:
+                error += [f'ALAMO - Multiple materials on shadow volume: {object.name}; remove additional materials']
+        if object.HasCollision:
+            if len(object.data.materials) > 1:
+                error += [f'ALAMO - Multiple submeshes/materials on collision mesh: {object.name}; remove additional materials']
+    if not object.data.uv_layers:  # or material.shaderList.shaderList in settings.no_UV_Shaders:  #currently UVs are needed for everything but shadows
+        error += [f'ALAMO - Missing UV: {object.name}']
 
     return error
 
 # throws error if armature modifier lacks rig, this would crash the exporter later and checks if skeleton in modifier doesn't match active skeleton
-def checkInvalidArmatureModifier(mesh_list):
+def checkInvalidArmatureModifier(object):
     activeSkeleton = bpy.context.scene.ActiveSkeleton.skeletonEnum
     error = []
-    for object in mesh_list:
-        for modifier in object.modifiers:
-            if modifier.type == "ARMATURE":
-                if modifier.object == None:
-                    error += [f'ALAMO - Armature modifier without selected skeleton on: {object.name}']
+    for modifier in object.modifiers:
+        if modifier.type == "ARMATURE":
+            if modifier.object is None:
+                error += [f'ALAMO - Armature modifier without selected skeleton on: {object.name}']
+                break
+            elif modifier.object.type != 'NoneType':
+                if modifier.object.name != activeSkeleton:
+                    error += [f"ALAMO - Armature modifier skeleton doesn't match active skeleton on: {object.name}"]
                     break
-                elif modifier.object.type != 'NoneType':
-                    if modifier.object.name != activeSkeleton:
-                        error += [f"ALAMO - Armature modifier skeleton doesn't match active skeleton on: {object.name}"]
-                        break
-        for constraint in object.constraints:
-            if constraint.type == 'CHILD_OF':
-                if constraint.target is not None:
-                    # print(type(constraint.target))
-                    if constraint.target.name != activeSkeleton:
-                        error += [f"ALAMO - Constraint doesn't match active skeleton on: {object.name}"]
-                        break
+    for constraint in object.constraints:
+        if (
+            constraint.type == 'CHILD_OF'
+            and constraint.target is not None
+            and constraint.target.name != activeSkeleton
+        ):
+            error += [f"ALAMO - Constraint doesn't match active skeleton on: {object.name}"]
+            break
 
     return error
 
 # checks if the number of faces exceeds max ushort, which is used to save the indices
-def checkFaceNumber(mesh_list):
-    for object in mesh_list:
-        if len(object.data.polygons) > 65535:
-            return [f'ALAMO - Face number exceeds uShort max on object: {object.name}; split mesh into multiple objects']
+def checkFaceNumber(object):
+    if len(object.data.polygons) > 65535:
+        return [f'ALAMO - {object.name} exceeds maximum face limit; split mesh into multiple objects']
     return []
 
-def checkAutosmooth(mesh_list):  # prints a warning if Autosmooth is used
-    for object in mesh_list:
-        if object.data.use_auto_smooth:
-            return [f'ALAMO -  {object.name} uses autosmooth, ingame shading might not match blender; use edgesplit instead']
+def checkAutosmooth(object):  # prints a warning if Autosmooth is used
+    if object.data.use_auto_smooth:
+        return [f'ALAMO - {object.name} uses autosmooth, ingame shading might not match blender; use edgesplit instead']
     return []
 
-def checkTranslation(mesh_list):  # prints warning when translation is not default
-    for object in mesh_list:
-        if object.location != mathutils.Vector((0.0, 0.0, 0.0)) or object.rotation_euler != mathutils.Euler((0.0, 0.0, 0.0), 'XYZ') or object.scale != mathutils.Vector((1.0, 1.0, 1.0)):
-            return [f'ALAMO - {object.name} is not aligned with the world origin; apply translation or bind to bone']
+def checkTranslation(object):  # prints warning when translation is not default
+    if object.location != mathutils.Vector((0.0, 0.0, 0.0)) or object.rotation_euler != mathutils.Euler((0.0, 0.0, 0.0), 'XYZ'):
+        return [f'ALAMO - {object.name} is not aligned with the world origin; apply translation or bind to bone']
     return []
 
-def checkTranslationArmature(mesh_list):  # prints warning when translation is not default
+def checkScale(object):  # prints warning when scale is not default
+    if object.scale != mathutils.Vector((1.0, 1.0, 1.0)):
+        return [f'ALAMO - {object.name} has non-identity scale. Apply scale.']
+    return []
+
+# checks if vertices have 0 or > 1 groups
+def checkVertexGroups(object):
+    print(len(object.vertex_groups))
+    if object.vertex_groups is None or len(object.vertex_groups) == 0:
+        return []
+    for vertex in object.data.vertices:
+        total = 0
+        for group in vertex.groups:
+            if group.weight not in [0, 1]:
+                return [f'ALAMO - Object {object.name} has improper vertex groups']
+            total += group.weight
+        if total not in [0, 1]:
+            return [f'ALAMO - Object {object.name} has improper vertex groups']
+        print(total)
+
+    return []
+
+def checkTranslationArmature():  # prints warning when translation is not default
     armature = utils.findArmature()
     if armature != None:
         if armature.location != mathutils.Vector((0.0, 0.0, 0.0)) or armature.rotation_euler != mathutils.Euler((0.0, 0.0, 0.0), 'XYZ') or armature.scale != mathutils.Vector((1.0, 1.0, 1.0)):
-            return ['ALAMO - active Armature is not aligned with the world origin']
+            return [f'ALAMO - Armature {armature} is not aligned with the world origin; apply translation']
     return []
 
 def validate(mesh_list):
@@ -136,16 +151,18 @@ def validate(mesh_list):
         checkFaceNumber,
         checkAutosmooth,
         checkTranslation,
-        checkTranslationArmature,
         checkInvalidArmatureModifier,
+        checkScale,
+        checkVertexGroups,
+    ]
+    checklist_no_object = [
+        checkTranslationArmature,
     ]
 
     for check in checklist:
-        test = check(mesh_list)
-        print(f'{test = }')
-        if test is not None:
-            errors += test
-
-    print(f'{errors = }')
+        for object in mesh_list:
+            errors += check(object)
+    for check in checklist_no_object:
+        errors += check()
 
     return errors

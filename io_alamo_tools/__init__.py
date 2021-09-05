@@ -53,11 +53,10 @@ class ValidateFileButton(bpy.types.Operator):
         errors = validation.validate(mesh_list)
         
         if errors is not None and len(errors) > 0:
-            print(errors)
             for error in errors:
                 self.report({"ERROR"}, error)
         else:
-            self.report({'INFO'}, 'ALAMO - No errors! Export away.')
+            self.report({'INFO'}, 'ALAMO - Validation complete. No errors detected!')
         return {'FINISHED'}
 
 
