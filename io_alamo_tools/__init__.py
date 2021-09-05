@@ -2,6 +2,7 @@ from . import_alo import ALO_Importer
 from . export_ala import ALA_Exporter
 from . export_alo import ALO_Exporter
 from . import_ala import ALA_Importer
+from . import validation
 from bpy.types import (Panel,
                        Operator,
                        PropertyGroup,
@@ -39,6 +40,25 @@ else:
     from . import export_ala
     from . import settings
     from . import utils
+
+
+class ValidateFileButton(bpy.types.Operator):
+    bl_idname = "alamo.validate_file"
+    bl_label = "Validate"
+
+    def execute(self, context):
+        mesh_list = validation.create_export_list(bpy.context.scene.collection, True, "DATA")
+
+        #check if export objects satisfy requirements (has material, UVs, ...)
+        errors = validation.validate(mesh_list)
+        
+        if errors is not None and len(errors) > 0:
+            print(errors)
+            for error in errors:
+                self.report({"ERROR"}, error)
+        else:
+            self.report({'INFO'}, 'ALAMO - No errors! Export away.')
+        return {'FINISHED'}
 
 
 class createConstraintBoneButton(bpy.types.Operator):
@@ -385,8 +405,9 @@ class ALAMO_PT_ToolsPanel(bpy.types.Panel):
     bl_category = "ALAMO"
 
     def draw(self, context):
-        # self.layout.separator()
-        pass
+        row = self.layout.row()
+        row.operator("alamo.validate_file")
+        row.scale_y = 3.0
 
 
 class ALAMO_PT_ObjectPanel(bpy.types.Panel):
@@ -433,8 +454,9 @@ class ALAMO_PT_ArmatureSettingsPanel(bpy.types.Panel):
         layout.prop(scene.ActiveSkeleton, 'skeletonEnum')
 
         armature = utils.findArmature()
-        createConstraintBone = self.layout.operator("create.constraint_bone", text='Create Constraint Bone')
-        createConstraintBone.active = False
+        row = layout.row()
+        row.operator("create.constraint_bone", text='Create Constraint Bone')
+        row.active = False
         if armature is not None:
             hasChildConstraint = any(
                 constraint.type == 'CHILD_OF'
@@ -442,7 +464,7 @@ class ALAMO_PT_ArmatureSettingsPanel(bpy.types.Panel):
             )
 
             if not hasChildConstraint:
-                createConstraintBone.active = True
+                row.active = True
 
 
 class ALAMO_PT_EditBonePanel(bpy.types.Panel):
@@ -462,7 +484,7 @@ class ALAMO_PT_EditBonePanel(bpy.types.Panel):
             layout.active = True
 
         row = col.row(align=True)
-        row.label(text="Set Visible:")
+        row.label(text="Set Bone Visibility:")
         row.operator('alamo.bone_visible', text="", icon="HIDE_OFF")
         row.operator('alamo.bone_invisible', text="", icon="HIDE_ON")
 
@@ -563,11 +585,19 @@ class ALAMO_PT_AnimationPanel(bpy.types.Panel):
         row.operator('alamo.remove_keyframe_proxy', text="",
                      icon="X")
 
-        box = layout.box()
-        box.label(text="Action End Frames:")
 
+class ALAMO_PT_AnimationActionSubPanel(bpy.types.Panel):
+
+    bl_label = "Action End Frames"
+    bl_parent_id = 'ALAMO_PT_AnimationPanel'
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "ALAMO"
+
+    def draw(self, context):
+        layout = self.layout
         for action in bpy.data.actions:
-            box.prop(action, "AnimationEndFrame", text=action.name)
+            layout.prop(action, "AnimationEndFrame", text=action.name)
 
 
 class ALAMO_PT_materialPropertyPanel(bpy.types.Panel):
@@ -737,6 +767,7 @@ classes = (
     ALA_Exporter,
     ALAMO_PT_materialPropertyPanel,
     ALAMO_PT_materialPropertySubPanel,
+    ValidateFileButton,
     createConstraintBoneButton,
     SetHasCollisionTrue,
     SetHasCollisionFalse,
@@ -759,6 +790,7 @@ classes = (
     ALAMO_PT_EditBonePanel,
     ALAMO_PT_EditBoneSubPanel,
     ALAMO_PT_AnimationPanel,
+    ALAMO_PT_AnimationActionSubPanel,
     ALAMO_PT_DebugPanel
 )
 
