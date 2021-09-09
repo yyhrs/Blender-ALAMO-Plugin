@@ -84,17 +84,20 @@ def ShouldEnableAnim(bones, prop, set_to):
     frame = bpy.context.scene.frame_current
     action = bpy.context.object.animation_data.action
     has_keyframes = False
+    has_previous_keyframe = False
     for bone in bones:
         keyframes = action.fcurves.find(bone.path_from_id() + "." + prop)
         if keyframes is not None:
             for keyframe in keyframes.keyframe_points:
+                if int(keyframe.co[0]) <= frame:
+                    has_previous_keyframe = True
                 if int(keyframe.co[0]) == frame:
                     has_keyframes = True
                     break
 
     if set_to is None:
         return has_keyframes    
-    if not has_keyframes:
+    if not has_previous_keyframe:
         return True
 
     all_same = CheckPropAllSame(bones, prop)
