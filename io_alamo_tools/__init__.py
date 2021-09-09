@@ -41,6 +41,12 @@ else:
     from . import settings
     from . import utils
 
+def CheckObjectType(objects, type):
+    for object in objects:
+        if object.type != type:
+            return False
+    return True
+
 
 def CheckPropAllSame(objects, prop):
     # True: All same, have value of True
@@ -58,12 +64,44 @@ def CheckPropAllSame(objects, prop):
 def ShouldEnable(objects, prop, set_to):
     if objects is None or len(objects) <= 0:
         return False
+    if bpy.context.mode == "OBJECT":
+        objects_same = CheckObjectType(objects, "MESH")
+        if not objects_same:
+            return False
     all_same = CheckPropAllSame(objects, prop)
     if all_same is not None:
         if set_to:
             return not all_same
         else:
             return all_same
+    return True
+
+
+def ShouldEnableAnim(bones, prop, set_to):
+    if bones is None or len(bones) <= 0:
+        return False
+
+    frame = bpy.context.scene.frame_current
+    action = bpy.context.object.animation_data.action
+    has_keyframes = False
+    for bone in bones:
+        keyframes = action.fcurves.find(bone.path_from_id() + "." + prop)
+        if keyframes is not None:
+            for keyframe in keyframes.keyframe_points:
+                if int(keyframe.co[0]) == frame:
+                    has_keyframes = True
+                    break
+
+    if set_to is None:
+        return has_keyframes    
+    if not has_keyframes:
+        return True
+
+    all_same = CheckPropAllSame(bones, prop)
+    if all_same is not None:
+        if set_to:
+            return not all_same
+        return all_same
     return True
 
 
@@ -88,6 +126,19 @@ class ValidateFileButton(bpy.types.Operator):
 class createConstraintBoneButton(bpy.types.Operator):
     bl_idname = "create.constraint_bone"
     bl_label = "Create constraint bone"
+
+    @classmethod
+    def poll(cls, context):
+        if len(bpy.context.selected_objects) > 1:
+            return False
+        if utils.findArmature() is not None:
+            hasChildConstraint = any(
+                constraint.type == 'CHILD_OF'
+                for constraint in bpy.context.object.constraints
+            )
+
+            return not hasChildConstraint
+        return False
 
     def execute(self, context):
         object = bpy.context.view_layer.objects.active
@@ -320,9 +371,9 @@ def keyframeProxySet(operation):
             bone.keyframe_delete(data_path="proxyIsHiddenAnimation")
         else:
             bone.keyframe_insert(data_path="proxyIsHiddenAnimation", group=bone.name)
-            for keyframe in action.fcurves.find(bone.path_from_id() + ".proxyIsHiddenAnimation").keyframe_points:
-                if int(keyframe.co[0]) == frame:
-                    keyframe.type = keyframeType
+            # for keyframe in action.fcurves.find(bone.path_from_id() + ".proxyIsHiddenAnimation").keyframe_points:
+            #     if int(keyframe.co[0]) == frame:
+            #         keyframe.type = keyframeType
 
     for area in bpy.context.screen.areas:
         if area.type == 'DOPESHEET_EDITOR':
@@ -336,9 +387,7 @@ class keyframeProxyShow(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        if bpy.context.selected_pose_bones is not None:
-            return len(bpy.context.selected_pose_bones) > 0
-        return False
+        return ShouldEnableAnim(bpy.context.selected_pose_bones, "proxyIsHiddenAnimation", False)
 
     def execute(self, context):
         keyframeProxySet('SHOW')
@@ -352,9 +401,7 @@ class keyframeProxyHide(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        if bpy.context.selected_pose_bones is not None:
-            return len(bpy.context.selected_pose_bones) > 0
-        return False
+        return ShouldEnableAnim(bpy.context.selected_pose_bones, "proxyIsHiddenAnimation", True)
 
     def execute(self, context):
         keyframeProxySet('HIDE')
@@ -368,9 +415,7 @@ class keyframeProxyRemove(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        if bpy.context.selected_pose_bones is not None:
-            return len(bpy.context.selected_pose_bones) > 0
-        return False
+        return ShouldEnableAnim(bpy.context.selected_pose_bones, "proxyIsHiddenAnimation", None)
 
     def execute(self, context):
         keyframeProxySet('REMOVE')
@@ -457,15 +502,6 @@ class ALAMO_PT_ArmatureSettingsPanel(bpy.types.Panel):
         armature = utils.findArmature()
         row = layout.row()
         row.operator("create.constraint_bone", text='Create Constraint Bone')
-        row.active = False
-        if armature is not None:
-            hasChildConstraint = any(
-                constraint.type == 'CHILD_OF'
-                for constraint in object.constraints
-            )
-
-            if not hasChildConstraint:
-                row.active = True
 
 
 class ALAMO_PT_EditBonePanel(bpy.types.Panel):
