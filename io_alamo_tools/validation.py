@@ -121,7 +121,6 @@ def checkScale(object):  # prints warning when scale is not default
 
 # checks if vertices have 0 or > 1 groups
 def checkVertexGroups(object):
-    print(len(object.vertex_groups))
     if object.vertex_groups is None or len(object.vertex_groups) == 0:
         return []
     for vertex in object.data.vertices:
@@ -132,13 +131,27 @@ def checkVertexGroups(object):
             total += group.weight
         if total not in [0, 1]:
             return [f'ALAMO - Object {object.name} has improper vertex groups']
-        print(total)
 
     return []
 
+def checkNumBones(object):
+    if type(object) != type(None) and object.type == 'MESH':
+        material = bpy.context.active_object.active_material
+        if material is not None and material.shaderList.shaderList.find("RSkin") > -1:
+            used_groups = []
+            for vertex in object.data.vertices:
+                for group in vertex.groups:
+                    if group.weight == 1:
+                        used_groups.append(group.group)
+
+            if len(set(used_groups)) > 23:
+                return [f'ALAMO - Object {object.name} uses too many bones.']
+    return []
+
+
 def checkTranslationArmature():  # prints warning when translation is not default
     armature = utils.findArmature()
-    if armature != None:
+    if armature is not None:
         if armature.location != mathutils.Vector((0.0, 0.0, 0.0)) or armature.rotation_euler != mathutils.Euler((0.0, 0.0, 0.0), 'XYZ') or armature.scale != mathutils.Vector((1.0, 1.0, 1.0)):
             return [f'ALAMO - Armature {armature} is not aligned with the world origin; apply translation']
     return []
@@ -154,6 +167,7 @@ def validate(mesh_list):
         checkInvalidArmatureModifier,
         checkScale,
         checkVertexGroups,
+        checkNumBones,
     ]
     checklist_no_object = [
         checkTranslationArmature,
