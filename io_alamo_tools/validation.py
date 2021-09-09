@@ -22,7 +22,7 @@ def create_export_list(collection, exportHiddenObjects, useNamesFrom):
     return export_list
 
 def selectNonManifoldVertices(object):
-    if(bpy.context.mode != 'OBJECT'):
+    if bpy.context.mode != 'OBJECT':
         bpy.ops.object.mode_set(mode='OBJECT')
     object.hide_set(False)
     bpy.context.view_layer.objects.active = object

@@ -42,6 +42,31 @@ else:
     from . import utils
 
 
+def CheckPropAllSame(objects, prop):
+    # True: All same, have value of True
+    # False: All same, have value of False
+    # None: Not all same
+    first_value = None
+    for object in objects:
+        if first_value is None:
+            first_value = getattr(object, prop)
+        elif getattr(object, prop) != first_value:
+            return None
+    return first_value
+
+
+def ShouldEnable(objects, prop, set_to):
+    if objects is None or len(objects) <= 0:
+        return False
+    all_same = CheckPropAllSame(objects, prop)
+    if all_same is not None:
+        if set_to:
+            return not all_same
+        else:
+            return all_same
+    return True
+
+
 class ValidateFileButton(bpy.types.Operator):
     bl_idname = "alamo.validate_file"
     bl_label = "Validate"
@@ -92,9 +117,7 @@ class SetHasCollisionTrue(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        if bpy.context.selected_objects is not None:
-            return len(bpy.context.selected_objects) > 0
-        return False
+        return ShouldEnable(bpy.context.selected_objects, "HasCollision", True)
 
     def execute(self, context):
         objs = bpy.context.selected_objects
@@ -110,9 +133,7 @@ class SetHasCollisionFalse(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        if bpy.context.selected_objects is not None:
-            return len(bpy.context.selected_objects) > 0
-        return False
+        return ShouldEnable(bpy.context.selected_objects, "HasCollision", False)
 
     def execute(self, context):
         objs = bpy.context.selected_objects
@@ -128,9 +149,7 @@ class SetHiddenTrue(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        if bpy.context.selected_objects is not None:
-            return len(bpy.context.selected_objects) > 0
-        return False
+        return ShouldEnable(bpy.context.selected_objects, "Hidden", True)
 
     def execute(self, context):
         objs = bpy.context.selected_objects
@@ -146,9 +165,7 @@ class SetHiddenFalse(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        if bpy.context.selected_objects is not None:
-            return len(bpy.context.selected_objects) > 0
-        return False
+        return ShouldEnable(bpy.context.selected_objects, "Hidden", False)
 
     def execute(self, context):
         objs = bpy.context.selected_objects
@@ -164,9 +181,7 @@ class SetBoneVisible(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        if bpy.context.selected_bones is not None:
-            return len(bpy.context.selected_bones) > 0
-        return False
+        return ShouldEnable(bpy.context.selected_bones, "Visible", True)
 
     def execute(self, context):
         bones = bpy.context.selected_bones
@@ -182,9 +197,7 @@ class SetBoneInvisible(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        if bpy.context.selected_bones is not None:
-            return len(bpy.context.selected_bones) > 0
-        return False
+        return ShouldEnable(bpy.context.selected_bones, "Visible", False)
 
     def execute(self, context):
         bones = bpy.context.selected_bones
@@ -200,9 +213,7 @@ class SetAltDecreaseStayHiddenTrue(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        if bpy.context.selected_bones is not None:
-            return len(bpy.context.selected_bones) > 0
-        return False
+        return ShouldEnable(bpy.context.selected_bones, "altDecreaseStayHidden", True)
 
     def execute(self, context):
         bones = bpy.context.selected_bones
@@ -218,9 +229,7 @@ class SetAltDecreaseStayHiddenFalse(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        if bpy.context.selected_bones is not None:
-            return len(bpy.context.selected_bones) > 0
-        return False
+        return ShouldEnable(bpy.context.selected_bones, "altDecreaseStayHidden", False)
 
     def execute(self, context):
         bones = bpy.context.selected_bones
@@ -236,9 +245,7 @@ class EnableProxyFalse(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        if bpy.context.selected_bones is not None:
-            return len(bpy.context.selected_bones) > 0
-        return False
+        return ShouldEnable(bpy.context.selected_bones, "EnableProxy", False)
 
     def execute(self, context):
         bones = bpy.context.selected_bones
@@ -254,9 +261,7 @@ class EnableProxyTrue(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        if bpy.context.selected_bones is not None:
-            return len(bpy.context.selected_bones) > 0
-        return False
+        return ShouldEnable(bpy.context.selected_bones, "EnableProxy", True)
 
     def execute(self, context):
         bones = bpy.context.selected_bones
@@ -272,9 +277,7 @@ class ProxyShow(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        if bpy.context.selected_bones is not None:
-            return len(bpy.context.selected_bones) > 0
-        return False
+        return ShouldEnable(bpy.context.selected_bones, "proxyIsHidden", False)
 
     def execute(self, context):
         bones = bpy.context.selected_bones
@@ -290,9 +293,7 @@ class ProxyHide(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        if bpy.context.selected_bones is not None:
-            return len(bpy.context.selected_bones) > 0
-        return False
+        return ShouldEnable(bpy.context.selected_bones, "proxyIsHidden", True)
 
     def execute(self, context):
         bones = bpy.context.selected_bones
@@ -395,6 +396,13 @@ class skeletonEnumClass(PropertyGroup):
     )
 
 
+def rowbuilder(layout, label, operators, icons):
+    row = layout.row(align=True)
+    row.label(text=label)
+    row.operator(operators[0], text="", icon=icons[0])
+    row.operator(operators[1], text="", icon=icons[1])
+
+
 class ALAMO_PT_ToolsPanel(bpy.types.Panel):
 
     bl_label = "Alamo Properties"
@@ -425,15 +433,9 @@ class ALAMO_PT_ObjectPanel(bpy.types.Panel):
         if bpy.context.mode == "OBJECT":
             layout.active = True
 
-        row = layout.row(align=True)
-        row.label(text="Set HasCollision:")
-        row.operator('alamo.collision_true', text="", icon="CHECKMARK")
-        row.operator('alamo.collision_false', text="", icon="X")
+        rowbuilder(layout, "Set HasCollision:", ["alamo.collision_true", "alamo.collision_false"], ["CHECKMARK", "X"])
 
-        row = layout.row(align=True)
-        row.label(text="Set Hidden:")
-        row.operator('alamo.hidden_true', text="", icon="HIDE_OFF")
-        row.operator('alamo.hidden_false', text="", icon="HIDE_ON")
+        rowbuilder(layout, "Set Hidden:", ["alamo.hidden_false", "alamo.hidden_true"], ["HIDE_OFF", "HIDE_ON"])
 
 
 class ALAMO_PT_ArmatureSettingsPanel(bpy.types.Panel):
@@ -482,10 +484,7 @@ class ALAMO_PT_EditBonePanel(bpy.types.Panel):
         if bpy.context.mode == "EDIT_ARMATURE":
             layout.active = True
 
-        row = col.row(align=True)
-        row.label(text="Set Bone Visibility:")
-        row.operator('alamo.bone_visible', text="", icon="HIDE_OFF")
-        row.operator('alamo.bone_invisible', text="", icon="HIDE_ON")
+        rowbuilder(layout, "Set Bone Visibility:", ["alamo.bone_visible", "alamo.bone_invisible"], ["HIDE_OFF", "HIDE_ON"])
 
         row = col.row()
         row.enabled = False
@@ -520,45 +519,30 @@ class ALAMO_PT_EditBoneSubPanel(bpy.types.Panel):
     bl_options = {"HEADER_LAYOUT_EXPAND"}
 
     def draw_header(self, context):
-        row = self.layout.row(align=True)
-        row.active = False
+        layout = self.layout
+        layout.active = False
         if bpy.context.mode == "EDIT_ARMATURE":
-            row.active = True
-        row.label(text="Set Proxy:")
-        row.operator('alamo.enable_proxy', text="", icon="CHECKMARK")
-        row.operator('alamo.disable_proxy', text="", icon="X")
+            layout.active = True
+
+        rowbuilder(layout, "Set Proxy:", ["alamo.enable_proxy", "alamo.disable_proxy"], ["CHECKMARK", "X"])
 
     def draw(self, context):
         bones = bpy.context.selected_bones
         layout = self.layout
+
         all_same = True
 
         layout.active = False
         if bpy.context.mode == "EDIT_ARMATURE":
-            if bones is not None:
-                has_changed = None
-                for bone in bones:
-                    if has_changed is None:
-                        has_changed = bone.EnableProxy
-                    elif bone.EnableProxy != has_changed:
-                        all_same = False
-                        break
-
             layout.active = all_same
         
         if not all_same:
             layout.label(icon="ERROR", text="Inconsistent EnableProxy states.")
             layout.label(icon="BLANK1", text="Change selection or set EnableProxy.")
 
-        row = layout.row(align=True)
-        row.label(text="Set Proxy Visibility:")
-        row.operator('alamo.show_proxy', text="", icon="HIDE_OFF")
-        row.operator('alamo.hide_proxy', text="", icon="HIDE_ON")
+        rowbuilder(layout, "Set Proxy Visibility:", ["alamo.show_proxy", "alamo.hide_proxy"], ["HIDE_OFF", "HIDE_ON"])
 
-        row = layout.row(align=True)
-        row.label(text="Set altDecreaseStayHidden:")
-        row.operator('alamo.alt_decrease_stay_hidden_true', text="", icon="CHECKMARK")
-        row.operator('alamo.alt_decrease_stay_hidden_false', text="", icon="X")
+        rowbuilder(layout, "Set altDecreaseStayHidden:", ["alamo.alt_decrease_stay_hidden_true", "alamo.alt_decrease_stay_hidden_false"], ["CHECKMARK", "X"])
 
 
 class ALAMO_PT_AnimationPanel(bpy.types.Panel):
