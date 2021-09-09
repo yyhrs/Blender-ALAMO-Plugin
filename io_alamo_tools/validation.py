@@ -145,9 +145,8 @@ def checkNumBones(object):
                         used_groups.append(group.group)
 
             if len(set(used_groups)) > 23:
-                return [f'ALAMO - Object {object.name} uses too many bones.']
+                return [f'ALAMO - Object {object.name} has more than 23 bones.']
     return []
-
 
 def checkTranslationArmature():  # prints warning when translation is not default
     armature = utils.findArmature()
@@ -155,6 +154,17 @@ def checkTranslationArmature():  # prints warning when translation is not defaul
         if armature.location != mathutils.Vector((0.0, 0.0, 0.0)) or armature.rotation_euler != mathutils.Euler((0.0, 0.0, 0.0), 'XYZ') or armature.scale != mathutils.Vector((1.0, 1.0, 1.0)):
             return [f'ALAMO - Armature {armature} is not aligned with the world origin; apply translation']
     return []
+
+def checkProxyKeyframes():
+    actions = bpy.data.actions
+    local_errors = []
+    for action in actions:
+        for fcurve in action.fcurves:
+            if fcurve.data_path.find("proxyIsHiddenAnimation") > -1 and len(fcurve.keyframe_points) > 2:
+                local_errors += [f'ALAMO - Action {action.name} has fcurves with more than 2 proxy keyframes.']
+                break
+    return local_errors
+
 
 def validate(mesh_list):
     errors = []
@@ -171,6 +181,7 @@ def validate(mesh_list):
     ]
     checklist_no_object = [
         checkTranslationArmature,
+        checkProxyKeyframes,
     ]
 
     for check in checklist:
