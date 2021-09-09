@@ -25,6 +25,16 @@ import bmesh
 import copy
 from contextlib import contextmanager
 
+def skeletonEnumCallback(scene, context):
+    armatures = [('None', 'None', '', '', 0)]
+    counter = 1
+    for arm in bpy.data.objects:  # test if armature exists
+        if arm.type == 'ARMATURE':
+            armatures.append((arm.name, arm.name, '', '', counter))
+            counter += 1
+
+    return armatures
+
 
 @contextmanager
 def disable_exception_traceback():
@@ -75,6 +85,12 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
         default = 'MESH',
     )
 
+    skeletonEnum : EnumProperty(
+        name='Active Skeleton',
+        description = "skeleton that is exported",
+        items = skeletonEnumCallback,
+    )
+
 
     def draw(self, context):
         layout = self.layout
@@ -88,6 +104,9 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
         row = layout.row(heading="Names From")
         row.use_property_split = False
         row.prop(self, "useNamesFrom", expand = True)
+
+        row = layout.row()
+        row.prop(bpy.context.scene.ActiveSkeleton, "skeletonEnum")
 
     def execute(self, context):  # execute() is called by blender when running the operator.
 
