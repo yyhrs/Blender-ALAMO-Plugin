@@ -50,26 +50,36 @@ However it also means that an exported shadow mesh should not be able to cause a
 ## Sidebar
 
 The sidebar(default hotkey: 'N') offers an ALAMO properties option. 
-This lists the file format specific properties of the active object.  
-The avaible properties change depending on the mode and object type.
+This lists the file format specific properties of the active object.
 
-Scene propierties(always avaible): 
- - ActiveSkeleton: Files can only contain a single skeleton. Choose the skeleton that is used when exporting
- - AnimationEndFrame: per action, length of the animation
+Validate:
+ - Check for any problems that would cause an export to fail.
 
-Object properties(Mesh in object-mode): 
+Object tools (Mesh in object-mode): 
  - HasCollision: treated as collider ingame
  - Hidden: invisible ingame
+
+Armature Settings (always avaible): 
+ - ActiveSkeleton: Files can only contain a single skeleton. Choose the skeleton that is used when exporting
  
-Bone properties (Bone in edit-mode): 
+Bone Tools (Bone in edit-mode): 
+ - billboardMode: Sets the billboard mode. Can only be set on individually-selected bones.
  - Visible: Visibility of attached object
  - EnableProxy: bone is a proxy to spawn effects ingame, enables additional options: 
  - proxyIsHidden: flag that determines if the proxy is initially hidden
  - altDecreaseStayHidden: prevents proxies to become visible when the alt level decreases
- - ProxyName: name of the effect to be attached to the proxy
+ - ProxyName: name of the effect to be attached to the proxy. Can only be set on individually-selected bones.
  
  Bone properties (Bone in pose-mode):
-  - proxyIsHiddenAnimation: animated visibility of the proxy, when hovering over it with mouse: press 'I' to set keyframe 
+  - proxyIsHiddenAnimation: animated visibility of the proxy
+  - Action End Frames: per action, length of the animation
+
+ Debug:
+  - Unmodified original UI
+  
+  ### Gotchas
+   - Any clicks on the sidebar, but not on an active control, will be treated as a click in the 3d view. This can cause you to lose your selection.
+   - On validation, errors only pop up briefly, and warnings don't pop up at all. Recommend opening an Info panel when validating.
  
  ## Alamo material properties
 
