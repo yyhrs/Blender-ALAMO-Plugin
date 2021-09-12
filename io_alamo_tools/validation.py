@@ -42,14 +42,14 @@ def checkShadowMesh(object):
 
             for vertex in bm.verts:
                 if not vertex.is_manifold:
-                    bm.free()
+                    # bm.free()
                     selectNonManifoldVertices(object)
                     error += [({'ERROR'}, f'ALAMO - Non manifold geometry shadow mesh: {object.name}')]
                     break
 
             for edge in bm.edges:
                 if len(edge.link_faces) < 2:
-                    bm.free()
+                    # bm.free()
                     selectNonManifoldVertices(object)
                     error += [({'ERROR'}, f'ALAMO - Non manifold geometry shadow mesh: {object.name}')]
                     break
