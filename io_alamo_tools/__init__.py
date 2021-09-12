@@ -116,11 +116,11 @@ class ValidateFileButton(bpy.types.Operator):
         mesh_list = validation.create_export_list(bpy.context.scene.collection, True, "DATA")
 
         #check if export objects satisfy requirements (has material, UVs, ...)
-        errors = validation.validate(mesh_list)
+        messages = validation.validate(mesh_list)
         
-        if errors is not None and len(errors) > 0:
-            for error in errors:
-                self.report({"ERROR"}, error)
+        if messages is not None and len(messages) > 0:
+            for message in messages:
+                self.report(*message)
         else:
             self.report({'INFO'}, 'ALAMO - Validation complete. No errors detected!')
         return {'FINISHED'}

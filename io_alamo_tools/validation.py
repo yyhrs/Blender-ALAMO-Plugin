@@ -44,19 +44,19 @@ def checkShadowMesh(object):
                 if not vertex.is_manifold:
                     bm.free()
                     selectNonManifoldVertices(object)
-                    error += [f'ALAMO - Non manifold geometry shadow mesh: {object.name}']
+                    error += [({'ERROR'}, f'ALAMO - Non manifold geometry shadow mesh: {object.name}')]
                     break
 
             for edge in bm.edges:
                 if len(edge.link_faces) < 2:
                     bm.free()
                     selectNonManifoldVertices(object)
-                    error += [f'ALAMO - Non manifold geometry shadow mesh: {object.name}']
+                    error += [({'ERROR'}, f'ALAMO - Non manifold geometry shadow mesh: {object.name}')]
                     break
 
             bm.free()
     else:
-        error += [f'ALAMO - Missing material on object: {object.name}']
+        error += [({'ERROR'}, f'ALAMO - Missing material on object: {object.name}')]
 
     return error
 
@@ -65,12 +65,12 @@ def checkUV(object):  # throws error if object lacks UVs
     for material in object.data.materials:
         if material.shaderList.shaderList == 'MeshShadowVolume.fx' or material.shaderList.shaderList == 'RSkinShadowVolume.fx':
             if len(object.data.materials) > 1:
-                error += [f'ALAMO - Multiple materials on shadow volume: {object.name}; remove additional materials']
+                error += [({'ERROR'}, f'ALAMO - Multiple materials on shadow volume: {object.name}; remove additional materials')]
         if object.HasCollision:
             if len(object.data.materials) > 1:
-                error += [f'ALAMO - Multiple submeshes/materials on collision mesh: {object.name}; remove additional materials']
+                error += [({'ERROR'}, f'ALAMO - Multiple submeshes/materials on collision mesh: {object.name}; remove additional materials')]
     if not object.data.uv_layers:  # or material.shaderList.shaderList in settings.no_UV_Shaders:  #currently UVs are needed for everything but shadows
-        error += [f'ALAMO - Missing UV: {object.name}']
+        error += [({'ERROR'}, f'ALAMO - Missing UV: {object.name}')]
 
     return error
 
@@ -81,11 +81,11 @@ def checkInvalidArmatureModifier(object):
     for modifier in object.modifiers:
         if modifier.type == "ARMATURE":
             if modifier.object is None:
-                error += [f'ALAMO - Armature modifier without selected skeleton on: {object.name}']
+                error += [({'ERROR'}, f'ALAMO - Armature modifier without selected skeleton on: {object.name}')]
                 break
             elif modifier.object.type != 'NoneType':
                 if modifier.object.name != activeSkeleton:
-                    error += [f"ALAMO - Armature modifier skeleton doesn't match active skeleton on: {object.name}"]
+                    error += [({'ERROR'}, f"ALAMO - Armature modifier skeleton doesn't match active skeleton on: {object.name}")]
                     break
     for constraint in object.constraints:
         if (
@@ -93,7 +93,7 @@ def checkInvalidArmatureModifier(object):
             and constraint.target is not None
             and constraint.target.name != activeSkeleton
         ):
-            error += [f"ALAMO - Constraint doesn't match active skeleton on: {object.name}"]
+            error += [({'ERROR'}, f"ALAMO - Constraint doesn't match active skeleton on: {object.name}")]
             break
 
     return error
@@ -101,22 +101,22 @@ def checkInvalidArmatureModifier(object):
 # checks if the number of faces exceeds max ushort, which is used to save the indices
 def checkFaceNumber(object):
     if len(object.data.polygons) > 65535:
-        return [f'ALAMO - {object.name} exceeds maximum face limit; split mesh into multiple objects']
+        return [({'ERROR'}, f'ALAMO - {object.name} exceeds maximum face limit; split mesh into multiple objects')]
     return []
 
 def checkAutosmooth(object):  # prints a warning if Autosmooth is used
     if object.data.use_auto_smooth:
-        return [f'ALAMO - {object.name} uses autosmooth, ingame shading might not match blender; use edgesplit instead']
+        return [({'ERROR'}, f'ALAMO - {object.name} uses autosmooth, ingame shading might not match blender; use edgesplit instead')]
     return []
 
 def checkTranslation(object):  # prints warning when translation is not default
     if object.location != mathutils.Vector((0.0, 0.0, 0.0)) or object.rotation_euler != mathutils.Euler((0.0, 0.0, 0.0), 'XYZ'):
-        return [f'ALAMO - {object.name} is not aligned with the world origin; apply translation or bind to bone']
+        return [({'ERROR'}, f'ALAMO - {object.name} is not aligned with the world origin; apply translation or bind to bone')]
     return []
 
 def checkScale(object):  # prints warning when scale is not default
     if object.scale != mathutils.Vector((1.0, 1.0, 1.0)):
-        return [f'ALAMO - {object.name} has non-identity scale. Apply scale.']
+        return [({'ERROR'}, f'ALAMO - {object.name} has non-identity scale. Apply scale.')]
     return []
 
 # checks if vertices have 0 or > 1 groups
@@ -127,10 +127,10 @@ def checkVertexGroups(object):
         total = 0
         for group in vertex.groups:
             if group.weight not in [0, 1]:
-                return [f'ALAMO - Object {object.name} has improper vertex groups']
+                return [({'ERROR'}, f'ALAMO - Object {object.name} has improper vertex groups')]
             total += group.weight
         if total not in [0, 1]:
-            return [f'ALAMO - Object {object.name} has improper vertex groups']
+            return [({'ERROR'}, f'ALAMO - Object {object.name} has improper vertex groups')]
 
     return []
 
@@ -145,26 +145,37 @@ def checkNumBones(object):
                         used_groups.append(group.group)
 
             if len(set(used_groups)) > 23:
-                return [f'ALAMO - Object {object.name} has more than 23 bones.']
+                return [({'ERROR'}, f'ALAMO - Object {object.name} has more than 23 bones.')]
     return []
 
 def checkTranslationArmature():  # prints warning when translation is not default
     armature = utils.findArmature()
-    if armature is not None:
-        if armature.location != mathutils.Vector((0.0, 0.0, 0.0)) or armature.rotation_euler != mathutils.Euler((0.0, 0.0, 0.0), 'XYZ') or armature.scale != mathutils.Vector((1.0, 1.0, 1.0)):
-            return [f'ALAMO - Armature {armature} is not aligned with the world origin; apply translation']
+    if armature is not None and (
+        armature.location != mathutils.Vector((0.0, 0.0, 0.0))
+        or armature.rotation_euler != mathutils.Euler((0.0, 0.0, 0.0), 'XYZ')
+        or armature.scale != mathutils.Vector((1.0, 1.0, 1.0))
+    ):
+        return [({'ERROR'}, f'ALAMO - Armature {armature} is not aligned with the world origin; apply translation')]
     return []
 
 def checkProxyKeyframes():
-    actions = bpy.data.actions
     local_errors = []
+    actions = bpy.data.actions
+    current_frame = bpy.context.scene.frame_current
     for action in actions:
         for fcurve in action.fcurves:
-            if fcurve.data_path.find("proxyIsHiddenAnimation") > -1 and len(fcurve.keyframe_points) > 2:
-                local_errors += [f'ALAMO - Action {action.name} has fcurves with more than 2 proxy keyframes.']
-                break
+            if fcurve.data_path.find("proxyIsHiddenAnimation") > -1:
+                previous_keyframe = None
+                armature = utils.findArmature()
+                if armature is not None:
+                    for keyframe in fcurve.keyframe_points:
+                        bpy.context.scene.frame_set(int(keyframe.co[0]))
+                        this_keyframe = armature.path_resolve(fcurve.data_path)
+                        if this_keyframe == previous_keyframe:
+                            local_errors += [({'WARNING'}, f'ALAMO - {fcurve.group.name} has duplicate keyframe on frame {bpy.context.scene.frame_current}')]
+                        previous_keyframe = this_keyframe
+    bpy.context.scene.frame_set(current_frame)
     return local_errors
-
 
 def validate(mesh_list):
     errors = []
