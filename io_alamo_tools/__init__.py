@@ -126,21 +126,50 @@ class ValidateFileButton(bpy.types.Operator):
         return {'FINISHED'}
 
 
+# Legacy version, provided for the debug panel
 class createConstraintBoneButton(bpy.types.Operator):
     bl_idname = "create.constraint_bone"
     bl_label = "Create constraint bone"
 
+    def execute(self, context):
+        object = bpy.context.view_layer.objects.active
+        armature = utils.findArmature()
+
+        bpy.context.view_layer.objects.active = armature
+        utils.setModeToEdit()
+
+        bone = armature.data.edit_bones.new(object.name)
+        bone.tail = bone.head + mathutils.Vector((0, 0, 1))
+        bone.matrix = object.matrix_world
+        object.location = mathutils.Vector((0.0, 0.0, 0.0))
+        object.rotation_euler = mathutils.Euler((0.0, 0.0, 0.0), 'XYZ')
+        constraint = object.constraints.new('CHILD_OF')
+        constraint.target = armature
+        constraint.subtarget = bone.name
+
+        utils.setModeToObject()
+        bpy.context.view_layer.objects.active = object
+        return {'FINISHED'}
+
+
+class CreateConstraintBone(bpy.types.Operator):
+    bl_idname = "alamo.create_constraint_bone"
+    bl_label = "Create Constraint Bone"
+
     @classmethod
     def poll(cls, context):
-        if len(bpy.context.selected_objects) > 1:
-            return False
-        if utils.findArmature() is not None:
-            hasChildConstraint = any(
-                constraint.type == 'CHILD_OF'
-                for constraint in bpy.context.object.constraints
-            )
-
-            return not hasChildConstraint
+        object = bpy.context.object
+        if type(object) != type(None):
+            if(object.type == 'MESH'):
+                if bpy.context.mode == 'OBJECT':
+                    armature = utils.findArmature()
+                    if armature != None:
+                        hasChildConstraint = False
+                        for constraint in object.constraints:
+                            if constraint.type == 'CHILD_OF':
+                                hasChildConstraint = True
+                        if not hasChildConstraint:
+                            return True
         return False
 
     def execute(self, context):
@@ -502,9 +531,7 @@ class ALAMO_PT_ArmatureSettingsPanel(bpy.types.Panel):
 
         layout.prop(scene.ActiveSkeleton, 'skeletonEnum')
 
-        armature = utils.findArmature()
-        row = layout.row()
-        row.operator("create.constraint_bone", text='Create Constraint Bone')
+        layout.operator("alamo.create_constraint_bone")
 
 
 class ALAMO_PT_EditBonePanel(bpy.types.Panel):
@@ -535,17 +562,6 @@ class ALAMO_PT_EditBonePanel(bpy.types.Panel):
                 row.label(text="billboardMode")
         else:
             row.label(text="billboardMode")
-
-        row = col.row()
-        row.enabled = False
-        if bones is not None:
-            if len(bones) == 1:
-                row.prop(bones[0], "ProxyName")
-                row.enabled = True
-            else:
-                row.label(text="ProxyName")
-        else:
-            row.label(text="ProxyName")
 
 
 class ALAMO_PT_EditBoneSubPanel(bpy.types.Panel):
@@ -582,6 +598,17 @@ class ALAMO_PT_EditBoneSubPanel(bpy.types.Panel):
         rowbuilder(layout, "Set Proxy Visibility:", ["alamo.show_proxy", "alamo.hide_proxy"], ["HIDE_OFF", "HIDE_ON"])
 
         rowbuilder(layout, "Set altDecreaseStayHidden:", ["alamo.alt_decrease_stay_hidden_true", "alamo.alt_decrease_stay_hidden_false"], ["CHECKMARK", "X"])
+
+        row = layout.row()
+        row.enabled = False
+        if bones is not None:
+            if len(bones) == 1:
+                row.prop(bones[0], "ProxyName")
+                row.enabled = True
+            else:
+                row.label(text="ProxyName")
+        else:
+            row.label(text="ProxyName")
 
 
 class ALAMO_PT_AnimationPanel(bpy.types.Panel):
@@ -620,34 +647,6 @@ class ALAMO_PT_AnimationActionSubPanel(bpy.types.Panel):
         layout = self.layout
         for action in bpy.data.actions:
             layout.prop(action, "AnimationEndFrame", text=action.name)
-
-
-class ALAMO_PT_materialPropertyPanel(bpy.types.Panel):
-    bl_label = "Alamo Shader Properties"
-    bl_id = "ALAMO_PT_materialPropertyPanel"
-    bl_space_type = "PROPERTIES"
-    bl_region_type = "WINDOW"
-    bl_context = "material"
-
-    def draw(self, context):
-        object = context.object
-        layout = self.layout
-        col = layout.column()
-
-        if type(object) != type(None) and object.type == 'MESH':
-            material = bpy.context.active_object.active_material
-            if material is not None:
-                # a None image is needed to represent not using a texture
-                if 'None' not in bpy.data.images:
-                    bpy.data.images.new(name='None', width=1, height=1)
-                col.prop(material.shaderList, "shaderList")
-                if material.shaderList.shaderList != 'alDefault.fx':
-                    shader_props = settings.material_parameter_dict[material.shaderList.shaderList]
-                    for shader_prop in shader_props:
-                        # because contains() doesn't exist, apparently
-                        if shader_prop.find('Texture') > -1:
-                            layout.prop_search(material, shader_prop, bpy.data, "images")
-                            # layout.template_ID(material, shader_prop, new="image.new", open="image.open")
 
 
 class ALAMO_PT_DebugPanel(bpy.types.Panel):
@@ -701,6 +700,34 @@ class ALAMO_PT_DebugPanel(bpy.types.Panel):
             elif (type(bpy.context.active_bone) is bpy.types.Bone and bpy.context.mode == 'POSE'):
                 poseBone = object.pose.bones[bone.name]
                 c.prop(poseBone, "proxyIsHiddenAnimation")
+
+
+class ALAMO_PT_materialPropertyPanel(bpy.types.Panel):
+    bl_label = "Alamo Shader Properties"
+    bl_id = "ALAMO_PT_materialPropertyPanel"
+    bl_space_type = "PROPERTIES"
+    bl_region_type = "WINDOW"
+    bl_context = "material"
+
+    def draw(self, context):
+        object = context.object
+        layout = self.layout
+        col = layout.column()
+
+        if type(object) != type(None) and object.type == 'MESH':
+            material = bpy.context.active_object.active_material
+            if material is not None:
+                # a None image is needed to represent not using a texture
+                if 'None' not in bpy.data.images:
+                    bpy.data.images.new(name='None', width=1, height=1)
+                col.prop(material.shaderList, "shaderList")
+                if material.shaderList.shaderList != 'alDefault.fx':
+                    shader_props = settings.material_parameter_dict[material.shaderList.shaderList]
+                    for shader_prop in shader_props:
+                        # because contains() doesn't exist, apparently
+                        if shader_prop.find('Texture') > -1:
+                            layout.prop_search(material, shader_prop, bpy.data, "images")
+                            # layout.template_ID(material, shader_prop, new="image.new", open="image.open")
 
 
 class ALAMO_PT_materialPropertySubPanel(bpy.types.Panel):
@@ -790,6 +817,7 @@ classes = (
     ALAMO_PT_materialPropertyPanel,
     ALAMO_PT_materialPropertySubPanel,
     ValidateFileButton,
+    CreateConstraintBone,
     createConstraintBoneButton,
     SetHasCollisionTrue,
     SetHasCollisionFalse,
