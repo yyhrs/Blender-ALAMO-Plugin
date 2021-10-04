@@ -136,7 +136,7 @@ def checkVertexGroups(object):
 
 def checkNumBones(object):
     if type(object) != type(None) and object.type == 'MESH':
-        material = bpy.context.active_object.active_material
+        material = object.active_material
         if material is not None and material.shaderList.shaderList.find("RSkin") > -1:
             used_groups = []
             for vertex in object.data.vertices:
