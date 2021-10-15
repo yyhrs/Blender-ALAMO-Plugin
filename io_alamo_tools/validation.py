@@ -162,15 +162,19 @@ def checkProxyKeyframes():
     local_errors = []
     actions = bpy.data.actions
     current_frame = bpy.context.scene.frame_current
-    for action in actions:
-        for fcurve in action.fcurves:
-            if fcurve.data_path.find("proxyIsHiddenAnimation") > -1:
-                previous_keyframe = None
-                armature = utils.findArmature()
-                if armature is not None:
+    armature = findArmature()
+    if armature is not None:
+        for action in actions:
+            print(action.name)
+            for fcurve in action.fcurves:
+                print(fcurve.group.name)
+                if fcurve.data_path.find("proxyIsHiddenAnimation") > -1:
+                    previous_keyframe = None
                     for keyframe in fcurve.keyframe_points:
                         bpy.context.scene.frame_set(int(keyframe.co[0]))
+                        # TODO Keyframes don't store what action they're from. Maybe check each keyframe against the current action?
                         this_keyframe = armature.path_resolve(fcurve.data_path)
+                        print(previous_keyframe, this_keyframe)
                         if this_keyframe == previous_keyframe:
                             local_errors += [({'WARNING'}, f'ALAMO - {fcurve.group.name} has duplicate keyframe on frame {bpy.context.scene.frame_current}')]
                         previous_keyframe = this_keyframe
@@ -192,7 +196,7 @@ def validate(mesh_list):
     ]
     checklist_no_object = [
         checkTranslationArmature,
-        checkProxyKeyframes,
+        # checkProxyKeyframes, # Disabled until it can be fixed
     ]
 
     for check in checklist:

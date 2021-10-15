@@ -20,7 +20,7 @@ import bpy
 bl_info = {
     "name": "ALAMO Tools",
     "author": "Gaukler, evilbobthebob, inertial",
-    "version": (0, 0, 3, 2),
+    "version": (0, 0, 3, 3),
     "blender": (2, 93, 0),
     "category": "Import-Export"
 }
@@ -117,7 +117,7 @@ class ValidateFileButton(bpy.types.Operator):
 
         #check if export objects satisfy requirements (has material, UVs, ...)
         messages = validation.validate(mesh_list)
-        
+
         if messages is not None and len(messages) > 0:
             for message in messages:
                 self.report(*message)
@@ -159,17 +159,19 @@ class CreateConstraintBone(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         object = bpy.context.object
-        if type(object) != type(None):
-            if(object.type == 'MESH'):
-                if bpy.context.mode == 'OBJECT':
-                    armature = utils.findArmature()
-                    if armature != None:
-                        hasChildConstraint = False
-                        for constraint in object.constraints:
-                            if constraint.type == 'CHILD_OF':
-                                hasChildConstraint = True
-                        if not hasChildConstraint:
-                            return True
+        if (
+            type(object) != type(None)
+            and object.type == 'MESH'
+            and bpy.context.mode == 'OBJECT'
+        ):
+            armature = utils.findArmature()
+            if armature is not None:
+                hasChildConstraint = False
+                for constraint in object.constraints:
+                    if constraint.type == 'CHILD_OF':
+                        hasChildConstraint = True
+                if not hasChildConstraint:
+                    return True
         return False
 
     def execute(self, context):
@@ -195,7 +197,7 @@ class CreateConstraintBone(bpy.types.Operator):
 
 class SetHasCollisionTrue(bpy.types.Operator):
     bl_idname = "alamo.collision_true"
-    bl_label = "Show"
+    bl_label = ""
     bl_description = "Set HasCollision to True for all selected objects"
 
     @classmethod
@@ -211,7 +213,7 @@ class SetHasCollisionTrue(bpy.types.Operator):
 
 class SetHasCollisionFalse(bpy.types.Operator):
     bl_idname = "alamo.collision_false"
-    bl_label = "Hide"
+    bl_label = ""
     bl_description = "Set HasCollision to False for all selected objects"
 
     @classmethod
@@ -227,7 +229,7 @@ class SetHasCollisionFalse(bpy.types.Operator):
 
 class SetHiddenTrue(bpy.types.Operator):
     bl_idname = "alamo.hidden_true"
-    bl_label = "Show"
+    bl_label = ""
     bl_description = "Set Hidden to True for all selected objects"
 
     @classmethod
@@ -243,7 +245,7 @@ class SetHiddenTrue(bpy.types.Operator):
 
 class SetHiddenFalse(bpy.types.Operator):
     bl_idname = "alamo.hidden_false"
-    bl_label = "Hide"
+    bl_label = ""
     bl_description = "Set Hidden to False for all selected objects"
 
     @classmethod
@@ -259,7 +261,7 @@ class SetHiddenFalse(bpy.types.Operator):
 
 class SetBoneVisible(bpy.types.Operator):
     bl_idname = "alamo.bone_visible"
-    bl_label = "Show"
+    bl_label = ""
     bl_description = "Set Visible to True for all selected bones"
 
     @classmethod
@@ -275,7 +277,7 @@ class SetBoneVisible(bpy.types.Operator):
 
 class SetBoneInvisible(bpy.types.Operator):
     bl_idname = "alamo.bone_invisible"
-    bl_label = "Hide"
+    bl_label = ""
     bl_description = "Set Visible to False for all selected bones"
 
     @classmethod
@@ -291,7 +293,7 @@ class SetBoneInvisible(bpy.types.Operator):
 
 class SetAltDecreaseStayHiddenTrue(bpy.types.Operator):
     bl_idname = "alamo.alt_decrease_stay_hidden_true"
-    bl_label = "Show"
+    bl_label = ""
     bl_description = "Set altDecreaseStayHidden to True for all selected bones"
 
     @classmethod
@@ -307,7 +309,7 @@ class SetAltDecreaseStayHiddenTrue(bpy.types.Operator):
 
 class SetAltDecreaseStayHiddenFalse(bpy.types.Operator):
     bl_idname = "alamo.alt_decrease_stay_hidden_false"
-    bl_label = "Hide"
+    bl_label = ""
     bl_description = "Set altDecreaseStayHidden to False for all selected bones"
 
     @classmethod
@@ -323,7 +325,7 @@ class SetAltDecreaseStayHiddenFalse(bpy.types.Operator):
 
 class EnableProxyFalse(bpy.types.Operator):
     bl_idname = "alamo.disable_proxy"
-    bl_label = "Show"
+    bl_label = ""
     bl_description = "Set EnableProxy to False for all selected bones"
 
     @classmethod
@@ -339,7 +341,7 @@ class EnableProxyFalse(bpy.types.Operator):
 
 class EnableProxyTrue(bpy.types.Operator):
     bl_idname = "alamo.enable_proxy"
-    bl_label = "Hide"
+    bl_label = ""
     bl_description = "Set EnableProxy to True for all selected bones"
 
     @classmethod
@@ -355,7 +357,7 @@ class EnableProxyTrue(bpy.types.Operator):
 
 class ProxyShow(bpy.types.Operator):
     bl_idname = "alamo.show_proxy"
-    bl_label = "Show"
+    bl_label = ""
     bl_description = "Set proxyIsHidden to False for all selected bones"
 
     @classmethod
@@ -371,7 +373,7 @@ class ProxyShow(bpy.types.Operator):
 
 class ProxyHide(bpy.types.Operator):
     bl_idname = "alamo.hide_proxy"
-    bl_label = "Hide"
+    bl_label = ""
     bl_description = "Set proxyIsHidden to True for all selected bones"
 
     @classmethod
@@ -414,7 +416,7 @@ def keyframeProxySet(operation):
 
 class keyframeProxyShow(bpy.types.Operator):
     bl_idname = "alamo.show_keyframe_proxy"
-    bl_label = "Show"
+    bl_label = ""
     bl_description = "Create a keyframe and set proxyIsHiddenAnimation to False for all selected bones"
 
     @classmethod
@@ -428,7 +430,7 @@ class keyframeProxyShow(bpy.types.Operator):
 
 class keyframeProxyHide(bpy.types.Operator):
     bl_idname = "alamo.hide_keyframe_proxy"
-    bl_label = "Hide"
+    bl_label = ""
     bl_description = "Create a keyframe and set proxyIsHiddenAnimation to True for all selected bones"
 
     @classmethod
@@ -442,7 +444,7 @@ class keyframeProxyHide(bpy.types.Operator):
 
 class keyframeProxyRemove(bpy.types.Operator):
     bl_idname = "alamo.remove_keyframe_proxy"
-    bl_label = "Remove"
+    bl_label = ""
     bl_description = "Remove active keyframes from all selected bones"
 
     @classmethod
@@ -467,7 +469,7 @@ def skeletonEnumCallback(scene, context):
 
 class skeletonEnumClass(PropertyGroup):
     skeletonEnum : EnumProperty(
-        name='Active Skeleton',
+        name = 'Active Skeleton',
         description = "skeleton that is exported",
         items = skeletonEnumCallback
     )
@@ -590,7 +592,7 @@ class ALAMO_PT_EditBoneSubPanel(bpy.types.Panel):
         layout.active = False
         if bpy.context.mode == "EDIT_ARMATURE":
             layout.active = all_same
-        
+
         if not all_same:
             layout.label(icon="ERROR", text="Inconsistent EnableProxy states.")
             layout.label(icon="BLANK1", text="Change selection or set EnableProxy.")
