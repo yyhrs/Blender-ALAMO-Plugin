@@ -20,7 +20,7 @@ import bpy
 bl_info = {
     "name": "ALAMO Tools",
     "author": "Gaukler, evilbobthebob, inertial",
-    "version": (0, 0, 3, 3),
+    "version": (0, 0, 3, 4),
     "blender": (2, 93, 0),
     "category": "Import-Export"
 }
@@ -387,6 +387,23 @@ class ProxyHide(bpy.types.Operator):
         return {'FINISHED'}
 
 
+class CopyProxyNameToSelected(bpy.types.Operator):
+    bl_idname = "alamo.copy_proxy_name"
+    bl_label = ""
+    bl_description = "Copy Proxy Name to Selected Bones"
+
+    @classmethod
+    def poll(cls, context):
+        return bpy.context.selected_bones is not None and len(bpy.context.selected_bones) > 1
+
+    def execute(self, context):
+        bones = bpy.context.selected_bones
+        name = bones[0].ProxyName
+        for bone in bones:
+            bone.ProxyName = name
+        return {'FINISHED'}
+
+
 def keyframeProxySet(operation):
     bones = bpy.context.selected_pose_bones
     action = bpy.context.object.animation_data.action
@@ -601,14 +618,13 @@ class ALAMO_PT_EditBoneSubPanel(bpy.types.Panel):
 
         rowbuilder(layout, "Set altDecreaseStayHidden:", ["alamo.alt_decrease_stay_hidden_true", "alamo.alt_decrease_stay_hidden_false"], ["CHECKMARK", "X"])
 
-        row = layout.row()
+        row = layout.row(align=True)
         row.enabled = False
-        if bones is not None:
-            if len(bones) == 1:
-                row.prop(bones[0], "ProxyName")
-                row.enabled = True
-            else:
-                row.label(text="ProxyName")
+        if bones is not None and len(bones) > 0:
+            row.prop(bones[0], "ProxyName")
+            row.operator('alamo.copy_proxy_name', text="",
+                        icon="DUPLICATE")
+            row.enabled = True
         else:
             row.label(text="ProxyName")
 
@@ -833,6 +849,7 @@ classes = (
     EnableProxyTrue,
     ProxyShow,
     ProxyHide,
+    CopyProxyNameToSelected,
     keyframeProxyShow,
     keyframeProxyHide,
     keyframeProxyRemove,
