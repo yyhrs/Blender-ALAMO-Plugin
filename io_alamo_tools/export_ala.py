@@ -22,6 +22,18 @@ from bpy_extras.io_utils import ExportHelper, ImportHelper
 import sys
 import os
 import bmesh
+from contextlib import contextmanager
+
+@contextmanager
+def disable_exception_traceback():
+    """
+    All traceback information is suppressed and only the exception type and value are printed
+    Used to make user friendly errors
+    """
+    default_value = getattr(sys, "tracebacklimit", 1000)  # `1000` is a Python's default value
+    sys.tracebacklimit = 0
+    yield
+    sys.tracebacklimit = default_value  # revert changes
 
 def chunk_size(size):
             #high bit is used to determine if a chunk holds chunks or data
@@ -182,7 +194,7 @@ def create_animation():
     # get armature name
     armature = utils.findArmature()
     if armature == None:
-        print("Warning: No armature found!")
+        self.report({"WARNING"}, "No armature found!")
         return b''
 
     chunk += create_anim_info_chunk(armature)
@@ -425,15 +437,19 @@ def create_visibility_chunk(armature, bone):
 class AnimationExporter():
 
     def exportAnimation(self, path):
-        file = open(path, 'wb')  # open file in read binary mode
+        if os.access(path, os.W_OK) or not os.access(path, os.F_OK):
+            file = open(path, 'wb')  # open file in read binary mode
 
-        global translationOffsetDict
-        translationOffsetDict = {}
-        global translationScaleDict
-        translationScaleDict = {}
-        file.write(create_animation())
-        file.close()
-        file = None
+            global translationOffsetDict
+            translationOffsetDict = {}
+            global translationScaleDict
+            translationScaleDict = {}
+            file.write(create_animation())
+            file.close()
+            file = None
+        else:
+            with disable_exception_traceback():
+                raise Exception(f"ALAMO - EXPORT FAILED; can't write {os.path.split(path)[1]}")
 
 class ALA_Exporter(bpy.types.Operator):
 
