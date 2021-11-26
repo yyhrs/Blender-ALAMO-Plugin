@@ -39,7 +39,7 @@ def boneEnumCallback(scene, context):
 
 class ALO_Importer(bpy.types.Operator):
     """ALO Importer"""      # blender will use this as a tooltip for menu items and buttons.
-    bl_idname = "import.alo"        # unique identifier for buttons and menu items to reference.
+    bl_idname = "import_mesh.alo"        # unique identifier for buttons and menu items to reference.
     bl_label = "Import ALO File"         # display name in the interface.
     bl_options = {'REGISTER', 'UNDO'}  # enable undo for the operator.
     filename_ext = ".alo"

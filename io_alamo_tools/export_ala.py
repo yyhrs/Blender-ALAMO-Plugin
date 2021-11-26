@@ -454,7 +454,7 @@ class AnimationExporter():
 class ALA_Exporter(bpy.types.Operator):
 
     """ALA Exporter"""  # blender will use this as a tooltip for menu items and buttons.
-    bl_idname = "export.ala"  # unique identifier for buttons and menu items to reference.
+    bl_idname = "export_anim.ala"  # unique identifier for buttons and menu items to reference.
     bl_label = "Export ALA File"  # display name in the interface.
     bl_options = {'REGISTER', 'UNDO'}  # enable undo for the operator.
     bl_info = {

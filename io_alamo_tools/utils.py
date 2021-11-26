@@ -7,6 +7,9 @@ def findArmature():
     armatureName = bpy.context.scene.ActiveSkeleton.skeletonEnum
     if armatureName == 'None':
         return None
+    if armatureName == '':
+        print("Warning! Armature name is empty. Is this intended?")
+        return None
     armature = bpy.data.objects[armatureName]
     return armature
 

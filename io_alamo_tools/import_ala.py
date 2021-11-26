@@ -385,7 +385,7 @@ class AnimationImporter():
 
 class ALA_Importer(bpy.types.Operator):
     """ALA Importer"""      # blender will use this as a tooltip for menu items and buttons.
-    bl_idname = "import.ala"        # unique identifier for buttons and menu items to reference.
+    bl_idname = "import_anim.ala"        # unique identifier for buttons and menu items to reference.
     bl_label = "Import ALA File"         # display name in the interface.
     bl_options = {'REGISTER', 'UNDO'}  # enable undo for the operator.
     filename_ext = ".ala"

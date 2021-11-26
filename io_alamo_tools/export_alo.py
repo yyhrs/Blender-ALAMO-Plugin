@@ -50,7 +50,7 @@ def disable_exception_traceback():
 class ALO_Exporter(bpy.types.Operator, ExportHelper):
 
     """ALO Exporter"""  # blender will use this as a tooltip for menu items and buttons.
-    bl_idname = "export.alo"  # unique identifier for buttons and menu items to reference.
+    bl_idname = "export_mesh.alo"  # unique identifier for buttons and menu items to reference.
     bl_label = "Export ALO File"  # display name in the interface.
     bl_options = {'REGISTER', 'UNDO'}  # enable undo for the operator.
     bl_info = {
