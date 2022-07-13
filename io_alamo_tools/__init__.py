@@ -41,7 +41,7 @@ else:
 bl_info = {
     "name": "ALAMO Tools",
     "author": "Gaukler, evilbobthebob, inertial",
-    "version": (0, 0, 3, 4),
+    "version": (0, 0, 4, 0),
     "blender": (2, 93, 0),
     "category": "Import-Export",
 }
