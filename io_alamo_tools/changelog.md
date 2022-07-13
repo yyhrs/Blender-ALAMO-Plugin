@@ -5,6 +5,6 @@
 
 ### Other
 
-- Proxy keyframe validation fixed and re-enabled
+<!-- - Proxy keyframe validation fixed and re-enabled -->
 - Validator now correctly checks for maximum *triangles*, rather than faces
 - Adjustments for easier scripting of import/export

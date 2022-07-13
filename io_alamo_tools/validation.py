@@ -196,7 +196,7 @@ def validate(mesh_list):
     ]
     checklist_no_object = [
         checkTranslationArmature,
-        checkProxyKeyframes,
+        # checkProxyKeyframes,
     ]
 
     for check in checklist:
