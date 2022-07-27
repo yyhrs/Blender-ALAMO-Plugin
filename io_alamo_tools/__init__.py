@@ -1,4 +1,3 @@
-
 from . import_alo import ALO_Importer
 from . export_ala import ALA_Exporter
 from . export_alo import ALO_Exporter
@@ -18,7 +17,13 @@ from bpy.props import (StringProperty,
 from bpy.props import *
 import mathutils
 import bpy
-import os
+bl_info = {
+    "name": "ALAMO Tools",
+    "author": "Gaukler, evilbobthebob, inertial",
+    "version": (0, 0, 3, 4),
+    "blender": (2, 93, 0),
+    "category": "Import-Export"
+}
 
 if "bpy" in locals():
     import importlib
@@ -35,14 +40,6 @@ else:
     from . import export_ala
     from . import settings
     from . import utils
-
-bl_info = {
-    "name": "ALAMO Tools",
-    "author": "Gaukler, evilbobthebob, inertial",
-    "version": (0, 0, 3, 4),
-    "blender": (2, 93, 0),
-    "category": "Import-Export"
-}
 
 def CheckObjectType(objects, type):
     for object in objects:
@@ -129,7 +126,7 @@ class ValidateFileButton(bpy.types.Operator):
         return {'FINISHED'}
 
 
-# Legacy version, included for the debug panel
+# Legacy version, provided for the debug panel
 class createConstraintBoneButton(bpy.types.Operator):
     bl_idname = "create.constraint_bone"
     bl_label = "Create constraint bone"
@@ -142,7 +139,7 @@ class createConstraintBoneButton(bpy.types.Operator):
         utils.setModeToEdit()
 
         bone = armature.data.edit_bones.new(object.name)
-        bone.tail = bone.head + mathutils.Vector((0.0, 0.0, 1.0))
+        bone.tail = bone.head + mathutils.Vector((0, 0, 1))
         bone.matrix = object.matrix_world
         object.location = mathutils.Vector((0.0, 0.0, 0.0))
         object.rotation_euler = mathutils.Euler((0.0, 0.0, 0.0), 'XYZ')
@@ -185,7 +182,7 @@ class CreateConstraintBone(bpy.types.Operator):
         utils.setModeToEdit()
 
         bone = armature.data.edit_bones.new(object.name)
-        bone.tail = bone.head + mathutils.Vector((0.0, 0.0, 1.0))
+        bone.tail = bone.head + mathutils.Vector((0, 0, 1))
         bone.matrix = object.matrix_world
         object.location = mathutils.Vector((0.0, 0.0, 0.0))
         object.rotation_euler = mathutils.Euler((0.0, 0.0, 0.0), 'XYZ')
@@ -195,6 +192,70 @@ class CreateConstraintBone(bpy.types.Operator):
 
         utils.setModeToObject()
         bpy.context.view_layer.objects.active = object
+        return {'FINISHED'}
+
+
+class SetHasCollisionTrue(bpy.types.Operator):
+    bl_idname = "alamo.collision_true"
+    bl_label = ""
+    bl_description = "Set HasCollision to True for all selected objects"
+
+    @classmethod
+    def poll(cls, context):
+        return ShouldEnable(bpy.context.selected_objects, "HasCollision", True)
+
+    def execute(self, context):
+        objs = bpy.context.selected_objects
+        for obj in objs:
+            obj.HasCollision = True
+        return {'FINISHED'}
+
+
+class SetHasCollisionFalse(bpy.types.Operator):
+    bl_idname = "alamo.collision_false"
+    bl_label = ""
+    bl_description = "Set HasCollision to False for all selected objects"
+
+    @classmethod
+    def poll(cls, context):
+        return ShouldEnable(bpy.context.selected_objects, "HasCollision", False)
+
+    def execute(self, context):
+        objs = bpy.context.selected_objects
+        for obj in objs:
+            obj.HasCollision = False
+        return {'FINISHED'}
+
+
+class SetHiddenTrue(bpy.types.Operator):
+    bl_idname = "alamo.hidden_true"
+    bl_label = ""
+    bl_description = "Set Hidden to True for all selected objects"
+
+    @classmethod
+    def poll(cls, context):
+        return ShouldEnable(bpy.context.selected_objects, "Hidden", True)
+
+    def execute(self, context):
+        objs = bpy.context.selected_objects
+        for obj in objs:
+            obj.Hidden = True
+        return {'FINISHED'}
+
+
+class SetHiddenFalse(bpy.types.Operator):
+    bl_idname = "alamo.hidden_false"
+    bl_label = ""
+    bl_description = "Set Hidden to False for all selected objects"
+
+    @classmethod
+    def poll(cls, context):
+        return ShouldEnable(bpy.context.selected_objects, "Hidden", False)
+
+    def execute(self, context):
+        objs = bpy.context.selected_objects
+        for obj in objs:
+            obj.Hidden = False
         return {'FINISHED'}
 
 
@@ -438,10 +499,10 @@ def rowbuilder(layout, label, operators, icons):
     row.operator(operators[1], text="", icon=icons[1])
 
 
-class ALAMO_PT_ValidationPanel(bpy.types.Panel):
+class ALAMO_PT_ToolsPanel(bpy.types.Panel):
 
-    bl_label = "Validation"
-    bl_idname = "ALAMO_PT_ValidationPanel"
+    bl_label = "Alamo Properties"
+    bl_idname = "ALAMO_PT_ToolsPanel"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = "ALAMO"
@@ -452,9 +513,31 @@ class ALAMO_PT_ValidationPanel(bpy.types.Panel):
         row.scale_y = 3.0
 
 
+class ALAMO_PT_ObjectPanel(bpy.types.Panel):
+
+    bl_label = "Object Tools"
+    bl_parent_id = 'ALAMO_PT_ToolsPanel'
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "ALAMO"
+
+    def draw(self, context):
+        object = context.object
+        layout = self.layout
+        scene = context.scene
+        layout.active = False
+        if bpy.context.mode == "OBJECT":
+            layout.active = True
+
+        rowbuilder(layout, "Set HasCollision:", ["alamo.collision_true", "alamo.collision_false"], ["CHECKMARK", "X"])
+
+        rowbuilder(layout, "Set Hidden:", ["alamo.hidden_false", "alamo.hidden_true"], ["HIDE_OFF", "HIDE_ON"])
+
+
 class ALAMO_PT_ArmatureSettingsPanel(bpy.types.Panel):
 
-    bl_label = "Armature"
+    bl_label = "Armature Settings"
+    bl_parent_id = 'ALAMO_PT_ToolsPanel'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = "ALAMO"
@@ -472,7 +555,8 @@ class ALAMO_PT_ArmatureSettingsPanel(bpy.types.Panel):
 
 class ALAMO_PT_EditBonePanel(bpy.types.Panel):
 
-    bl_label = "Bone"
+    bl_label = "Edit Bone Tools"
+    bl_parent_id = 'ALAMO_PT_ToolsPanel'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = "ALAMO"
@@ -486,18 +570,17 @@ class ALAMO_PT_EditBonePanel(bpy.types.Panel):
             layout.active = True
 
         rowbuilder(layout, "Set Bone Visibility:", ["alamo.bone_visible", "alamo.bone_invisible"], ["HIDE_OFF", "HIDE_ON"])
-        rowbuilder(layout, "Set Proxy:", ["alamo.enable_proxy", "alamo.disable_proxy"], ["CHECKMARK", "X"])
 
         row = col.row()
         row.enabled = False
         if bones is not None:
             if len(bones) == 1:
-                row.prop(bones[0].billboardMode, "billboardMode", text="Billboard")
+                row.prop(bones[0].billboardMode, "billboardMode")
                 row.enabled = True
             else:
-                row.label(text="Billboard")
+                row.label(text="billboardMode")
         else:
-            row.label(text="Billboard")
+            row.label(text="billboardMode")
 
 
 class ALAMO_PT_EditBoneSubPanel(bpy.types.Panel):
@@ -507,7 +590,15 @@ class ALAMO_PT_EditBoneSubPanel(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = "ALAMO"
-    bl_options = {"HIDE_HEADER"}
+    bl_options = {"HEADER_LAYOUT_EXPAND"}
+
+    def draw_header(self, context):
+        layout = self.layout
+        layout.active = False
+        if bpy.context.mode == "EDIT_ARMATURE":
+            layout.active = True
+
+        rowbuilder(layout, "Set Proxy:", ["alamo.enable_proxy", "alamo.disable_proxy"], ["CHECKMARK", "X"])
 
     def draw(self, context):
         bones = bpy.context.selected_bones
@@ -541,6 +632,7 @@ class ALAMO_PT_EditBoneSubPanel(bpy.types.Panel):
 class ALAMO_PT_AnimationPanel(bpy.types.Panel):
 
     bl_label = "Animation"
+    bl_parent_id = 'ALAMO_PT_ToolsPanel'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = "ALAMO"
@@ -568,13 +660,9 @@ class ALAMO_PT_AnimationActionSubPanel(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = "ALAMO"
-    bl_options = {"HIDE_HEADER"}
 
     def draw(self, context):
         layout = self.layout
-        if bpy.data.actions is not None and bpy.data.actions > 1:
-            row = layout.row()
-            row.label(text="Action End Frames")
         for action in bpy.data.actions:
             layout.prop(action, "AnimationEndFrame", text=action.name)
 
@@ -582,6 +670,7 @@ class ALAMO_PT_AnimationActionSubPanel(bpy.types.Panel):
 class ALAMO_PT_DebugPanel(bpy.types.Panel):
 
     bl_label = "Debug"
+    bl_parent_id = 'ALAMO_PT_ToolsPanel'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = "ALAMO"
@@ -748,6 +837,10 @@ classes = (
     ValidateFileButton,
     CreateConstraintBone,
     createConstraintBoneButton,
+    SetHasCollisionTrue,
+    SetHasCollisionFalse,
+    SetHiddenTrue,
+    SetHiddenFalse,
     SetBoneVisible,
     SetBoneInvisible,
     SetAltDecreaseStayHiddenTrue,
@@ -760,7 +853,8 @@ classes = (
     keyframeProxyShow,
     keyframeProxyHide,
     keyframeProxyRemove,
-    ALAMO_PT_ValidationPanel,
+    ALAMO_PT_ToolsPanel,
+    ALAMO_PT_ObjectPanel,
     ALAMO_PT_ArmatureSettingsPanel,
     ALAMO_PT_EditBonePanel,
     ALAMO_PT_EditBoneSubPanel,
@@ -769,7 +863,9 @@ classes = (
     ALAMO_PT_DebugPanel
 )
 
+
 def register():
+
     from bpy.utils import register_class
     for cls in classes:
         register_class(cls)
@@ -810,70 +906,70 @@ def register():
     bpy.types.Material.shaderList = bpy.props.PointerProperty(
         type=shaderListProperties)
     bpy.types.Material.Emissive = bpy.props.FloatVectorProperty(
-        min=0.0, max=1.0, size=4, default=(0.0, 0.0, 0.0, 0.0))
+        min=0, max=1, size=4, default=(0, 0, 0, 0))
     bpy.types.Material.Diffuse = bpy.props.FloatVectorProperty(
-        min=0.0, max=1.0, size=4, default=(1.0, 1.0, 1.0, 0.0))
+        min=0, max=1, size=4, default=(1, 1, 1, 0))
     bpy.types.Material.Specular = bpy.props.FloatVectorProperty(
-        min=0.0, max=1.0, size=4, default=(1.0, 1.0, 1.0, 0.0))
+        min=0, max=1, size=4, default=(1, 1, 1, 0))
     bpy.types.Material.Shininess = bpy.props.FloatProperty(
-        min=0.0, max=255.0, default=32.0)
+        min=0, max=255, default=32)
     bpy.types.Material.Colorization = bpy.props.FloatVectorProperty(
-        min=0.0, max=1.0, size=4, default=(1.0, 1.0, 1.0, 0.0))
+        min=0, max=1, size=4, default=(1, 1, 1, 0))
     bpy.types.Material.DebugColor = bpy.props.FloatVectorProperty(
-        min=0.0, max=1.0, size=4, default=(0.0, 1.0, 0.0, 0.0))
+        min=0, max=1, size=4, default=(0, 1, 0, 0))
     bpy.types.Material.UVOffset = bpy.props.FloatVectorProperty(
-        min=0.0, max=1.0, size=4, default=(0.0, 0.0, 0.0, 0.0))
+        min=0, max=1, size=4, default=(0, 0, 0, 0))
     bpy.types.Material.Color = bpy.props.FloatVectorProperty(
-        min=0.0, max=1.0, size=4, default=(1.0, 1.0, 1.0, 1.0))
+        min=0, max=1, size=4, default=(1, 1, 1, 1))
     bpy.types.Material.UVScrollRate = bpy.props.FloatVectorProperty(
-        min=0.0, max=1.0, size=4, default=(0.0, 0.0, 0.0, 0.0))
+        min=0, max=1, size=4, default=(0, 0, 0, 0))
     bpy.types.Material.DiffuseColor = bpy.props.FloatVectorProperty(
-        min=0.0, max=1.0, size=3, default=(0.5, 0.5, 0.5))
+        min=0, max=1, size=3, default=(0.5, 0.5, 0.5))
     # shield shader properties
     bpy.types.Material.EdgeBrightness = bpy.props.FloatProperty(
-        min=0.0, max=255.0, default=0.5)
+        min=0, max=255, default=0.5)
     bpy.types.Material.BaseUVScale = bpy.props.FloatProperty(
-        min=-255.0, max=255.0, default=1.0)
+        min=-255, max=255, default=1)
     bpy.types.Material.WaveUVScale = bpy.props.FloatProperty(
-        min=-255.0, max=255.0, default=1.0)
+        min=-255, max=255, default=1)
     bpy.types.Material.DistortUVScale = bpy.props.FloatProperty(
-        min=-255.0, max=255.0, default=1.0)
+        min=-255, max=255, default=1)
     bpy.types.Material.BaseUVScrollRate = bpy.props.FloatProperty(
-        min=-255.0, max=255.0, default=-0.15)
+        min=-255, max=255, default=-0.15)
     bpy.types.Material.WaveUVScrollRate = bpy.props.FloatProperty(
-        min=-255.0, max=255.0, default=-0.15)
+        min=-255, max=255, default=-0.15)
     bpy.types.Material.DistortUVScrollRate = bpy.props.FloatProperty(
-        min=-255.0, max=255.0, default=-0.25)
+        min=-255, max=255, default=-0.25)
     # tree properties
     bpy.types.Material.BendScale = bpy.props.FloatProperty(
-        min=-255.0, max=255.0, default=0.4)
+        min=-255, max=255, default=0.4)
     # grass properties
     bpy.types.Material.Diffuse1 = bpy.props.FloatVectorProperty(
-        min=0.0, max=1.0, size=4, default=(1.0, 1.0, 1.0, 1.0))
+        min=0, max=1, size=4, default=(1, 1, 1, 1))
     # skydome.fx properties
     bpy.types.Material.CloudScrollRate = bpy.props.FloatProperty(
-        min=-255.0, max=255.0, default=0.001)
+        min=-255, max=255, default=0.001)
     bpy.types.Material.CloudScale = bpy.props.FloatProperty(
-        min=-255.0, max=255.0, default=1.0)
+        min=-255, max=255, default=1)
     # nebula.fx properties
     bpy.types.Material.SFreq = bpy.props.FloatProperty(
-        min=-255.0, max=255.0, default=0.002)
+        min=-255, max=255, default=0.002)
     bpy.types.Material.TFreq = bpy.props.FloatProperty(
-        min=-255.0, max=255.0, default=0.005)
+        min=-255, max=255, default=0.005)
     bpy.types.Material.DistortionScale = bpy.props.FloatProperty(
-        min=-255.0, max=255.0, default=1.0)
+        min=-255, max=255, default=1)
     # planet.fx properties
     bpy.types.Material.Atmosphere = bpy.props.FloatVectorProperty(
-        min=0.0, max=1.0, size=4, default=(0.5, 0.5, 0.5, 0.5))
+        min=0, max=1, size=4, default=(0.5, 0.5, 0.5, 0.5))
     bpy.types.Material.CityColor = bpy.props.FloatVectorProperty(
-        min=0.0, max=1.0, size=4, default=(0.5, 0.5, 0.5, 0.5))
+        min=0, max=1, size=4, default=(0.5, 0.5, 0.5, 0.5))
     bpy.types.Material.AtmospherePower = bpy.props.FloatProperty(
-        min=-255.0, max=255.0, default=1.0)
+        min=-255, max=255, default=1)
     # tryplanar mapping properties
     bpy.types.Material.MappingScale = bpy.props.FloatProperty(
-        min=0.0, max=255.0, default=0.1)
+        min=0, max=255, default=0.1)
     bpy.types.Material.BlendSharpness = bpy.props.FloatProperty(
-        min=0.0, max=255.0, default=0.1)
+        min=0, max=255, default=0.1)
 
 
 def unregister():

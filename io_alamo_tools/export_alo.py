@@ -341,11 +341,11 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
 
         class vertexData():
             def __init__(self):
-                self.co = mathutils.Vector((0.0, 0.0, 0.0))
-                self.uv = mathutils.Vector((0.0, 0.0))
-                self.normal = mathutils.Vector((0.0, 0.0, 0.0))
-                self.tangent = mathutils.Vector((0.0, 0.0, 0.0))
-                self.bitangent  = mathutils.Vector((0.0, 0.0, 0.0))
+                self.co = mathutils.Vector((0, 0, 0))
+                self.uv = mathutils.Vector((0, 0))
+                self.normal = mathutils.Vector((0, 0, 0))
+                self.tangent = mathutils.Vector((0, 0, 0))
+                self.bitangent  = mathutils.Vector((0, 0, 0))
                 self.bone_index = 0
                 self.face_index = 0
 
@@ -565,7 +565,7 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
                     vertex.co = vert.co
                     vertex.normal = face.normal
 
-                    vertex.uv =  mathutils.Vector((0.0, 0.0))
+                    vertex.uv =  mathutils.Vector((0, 0))
 
                     meshVertex = mesh.vertices[vert.index]
                     vertex.bone_index = getMaxWeightGroupIndex(meshVertex)
@@ -591,15 +591,15 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
                 f2v1 = per_face_vertex_id[face2.index][edge.verts[0].index]
                 f2v2 = per_face_vertex_id[face2.index][edge.verts[1].index]
 
-                mid1 = mathutils.Vector((0.0, 0.0, 0.0))
+                mid1 = mathutils.Vector((0, 0, 0))
                 for vert in face1.verts:
                     mid1 += vert.co
-                mid1 /= 3.0
+                mid1 /= 3
 
-                mid2 = mathutils.Vector((0.0, 0.0, 0.0))
+                mid2 = mathutils.Vector((0, 0, 0))
                 for vert in face2.verts:
                     mid2 += vert.co
-                mid2 /= 3.0
+                mid2 /= 3
 
 
                 face1v1 = edge.verts[0].co * 0.75 + mid1 * 0.25
@@ -911,8 +911,8 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
 
             def calc_bb_two_bb(bb1, bb2):   #takes two bbs and calculates combined bb
 
-                bb_min = mathutils.Vector((0.0, 0.0, 0.0))
-                bb_max = mathutils.Vector((0.0, 0.0, 0.0))
+                bb_min = mathutils.Vector((0, 0, 0))
+                bb_max = mathutils.Vector((0, 0, 0))
 
                 for i in range (0, 3):
                     bb_min[i] = min(bb1[0][i], bb2[0][i])
@@ -943,8 +943,8 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
 
 
             def calc_parent_space(parent, child):
-                child.parent_space_min = mathutils.Vector((0.0, 0.0, 0.0))
-                child.parent_space_max = mathutils.Vector((0.0, 0.0, 0.0))
+                child.parent_space_min = mathutils.Vector((0, 0, 0))
+                child.parent_space_max = mathutils.Vector((0, 0, 0))
                 for i in range(0, 3):
                     distance = parent.bb_max[i] - parent.bb_min[i]
                     if distance != 0:
@@ -1149,8 +1149,8 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
 
             bb = calc_bb_list(list_start)
             root = treeNode(bb[0], bb[1])
-            root.parent_space_min = mathutils.Vector((0.0, 0.0, 0.0))
-            root.parent_space_max = mathutils.Vector((255.0, 255.0, 255.0))
+            root.parent_space_min = mathutils.Vector((0, 0, 0))
+            root.parent_space_max = mathutils.Vector((255, 255, 255))
             #print('median cut starts')
             median_cut(root, list_start)
             #print('parent space calculation starts')

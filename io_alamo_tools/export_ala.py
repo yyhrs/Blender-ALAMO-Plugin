@@ -47,9 +47,9 @@ def calculateTranslationScale(bone, translationOffset, armature, translationList
         scene.frame_set(0)
         pose = armature.pose.bones[bone.name]  # get the pose bone
         # search for maximum translation
-        maxX = 0.0
-        maxY = 0.0
-        maxZ = 0.0
+        maxX = 0
+        maxY = 0
+        maxZ = 0
 
         action = utils.getCurrentAction()
         animLength = action.AnimationEndFrame
@@ -69,12 +69,12 @@ def calculateTranslationScale(bone, translationOffset, armature, translationList
             scene.frame_set(scene.frame_current + 1)
         scene.frame_set(0)
 
-        if (maxX == 0.0):
-            maxX = 1.0
-        if (maxY == 0.0):
-            maxY = 1.0
-        if (maxZ == 0.0):
-            maxZ = 1.0
+        if (maxX == 0):
+            maxX = 1
+        if (maxY == 0):
+            maxY = 1
+        if (maxZ == 0):
+            maxZ = 1
 
         scaleX = maxX / 65535.0
         scaleY = maxY / 65535.0
@@ -87,7 +87,7 @@ def calculateTranslationScale(bone, translationOffset, armature, translationList
 
         return mathutils.Vector(translationScale)
     else:
-        return mathutils.Vector((0.0, 0.0, 0.0))
+        return mathutils.Vector((0, 0, 0))
 
 def calculateTranslationOffset(bone, armature, translationList):
     scene = bpy.context.scene  # current scene
@@ -100,9 +100,9 @@ def calculateTranslationOffset(bone, armature, translationList):
 
     if (bone.name in translationList):
         scene.frame_set(0)
-        minX = 65535.0
-        minY = 65535.0
-        minZ = 65535.0
+        minX = 65535
+        minY = 65535
+        minZ = 65535
 
         action = utils.getCurrentAction()
         animLength = action.AnimationEndFrame

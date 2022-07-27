@@ -94,7 +94,7 @@ def read_translation_data(data):
     counter_limit = data.num_frames * data.translation_block_size * 3
     counter = 0
     while (counter < counter_limit):
-        vector = mathutils.Vector((0.0, 0.0, 0.0))
+        vector = mathutils.Vector((0, 0, 0))
         vector[0] = utils.read_u_short(file.read(2))
         vector[1] = utils.read_u_short(file.read(2))
         vector[2] = utils.read_u_short(file.read(2))
@@ -194,7 +194,7 @@ def read_bone_animation_info(data):
             continue
         elif active_child_chunk == b"\06":
             file.seek(1, 1)  # skip mini chunk size
-            vector = mathutils.Vector((0.0, 0.0, 0.0))
+            vector = mathutils.Vector((0, 0, 0))
             vector[0] = utils.read_float(file.read(4))
             vector[1] = utils.read_float(file.read(4))
             vector[2] = utils.read_float(file.read(4))
@@ -202,7 +202,7 @@ def read_bone_animation_info(data):
             continue
         elif active_child_chunk == b"\07":
             file.seek(1, 1)  # skip mini chunk size
-            vector = mathutils.Vector((0.0, 0.0, 0.0))
+            vector = mathutils.Vector((0, 0, 0))
             vector[0] = utils.read_float(file.read(4))
             vector[1] = utils.read_float(file.read(4))
             vector[2] = utils.read_float(file.read(4))

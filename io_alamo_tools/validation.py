@@ -98,9 +98,9 @@ def checkInvalidArmatureModifier(object):
 
     return error
 
-# checks if the number of triangles exceeds max ushort, which is used to save the indices
-def checkFaceNumber(object):    
-    if sum(len(polygon.vertices) - 2 for polygon in object.data.polygons) > 65535:
+# checks if the number of faces exceeds max ushort, which is used to save the indices
+def checkFaceNumber(object):
+    if len(object.data.polygons) > 65535:
         return [({'ERROR'}, f'ALAMO - {object.name} exceeds maximum face limit; split mesh into multiple objects')]
     return []
 
@@ -162,7 +162,7 @@ def checkProxyKeyframes():
     local_errors = []
     actions = bpy.data.actions
     current_frame = bpy.context.scene.frame_current
-    armature = utils.findArmature()
+    armature = findArmature()
     if armature is not None:
         for action in actions:
             print(action.name)
@@ -196,7 +196,7 @@ def validate(mesh_list):
     ]
     checklist_no_object = [
         checkTranslationArmature,
-        checkProxyKeyframes,
+        # checkProxyKeyframes, # Disabled until it can be fixed
     ]
 
     for check in checklist:
