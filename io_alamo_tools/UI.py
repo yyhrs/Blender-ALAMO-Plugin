@@ -1,25 +1,14 @@
-from . import validation
-from . import settings
-from . import utils
-from bpy.types import (
-    Panel,
-    Operator,
-    PropertyGroup,
-)
 from bpy.props import (
     StringProperty,
     BoolProperty,
     IntProperty,
-    FloatProperty,
     EnumProperty,
     PointerProperty,
 )
-# from bpy.props import *
+from . import validation
+from . import utils
 import mathutils
 import bpy
-
-
-classes = ()
 
 
 # UI Utilities ####################################################################################
@@ -47,10 +36,10 @@ def CheckPropAllSame(objects, prop):
     if objects is None or len(objects) <= 0:
         return None
     first_value = None
-    for object in objects:
+    for obj in objects:
         if first_value is None:
-            first_value = getattr(object, prop)
-        elif getattr(object, prop) != first_value:
+            first_value = getattr(obj, prop)
+        elif getattr(obj, prop) != first_value:
             return None
     return first_value
 
@@ -87,8 +76,8 @@ def setProp(all_same, objects, prop):
     if all_same in (None, False):
         set_to = True
 
-    for object in objects:
-        setattr(object, prop, set_to)
+    for obj in objects:
+        setattr(obj, prop, set_to)
 
 
 def proxy_name_update(self, context):
@@ -202,23 +191,23 @@ class createConstraintBoneButton(bpy.types.Operator):
     bl_label = "Create constraint bone"
 
     def execute(self, context):
-        object = bpy.context.view_layer.objects.active
+        obj = bpy.context.view_layer.objects.active
         armature = utils.findArmature()
 
         bpy.context.view_layer.objects.active = armature
         utils.setModeToEdit()
 
-        bone = armature.data.edit_bones.new(object.name)
+        bone = armature.data.edit_bones.new(obj.name)
         bone.tail = bone.head + mathutils.Vector((0.0, 0.0, 1.0))
-        bone.matrix = object.matrix_world
-        object.location = mathutils.Vector((0.0, 0.0, 0.0))
-        object.rotation_euler = mathutils.Euler((0.0, 0.0, 0.0), "XYZ")
-        constraint = object.constraints.new("CHILD_OF")
+        bone.matrix = obj.matrix_world
+        obj.location = mathutils.Vector((0.0, 0.0, 0.0))
+        obj.rotation_euler = mathutils.Euler((0.0, 0.0, 0.0), "XYZ")
+        constraint = obj.constraints.new("CHILD_OF")
         constraint.target = armature
         constraint.subtarget = bone.name
 
         utils.setModeToObject()
-        bpy.context.view_layer.objects.active = object
+        bpy.context.view_layer.objects.active = obj
         return {"FINISHED"}
 
 
@@ -229,16 +218,16 @@ class CreateConstraintBone(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        object = bpy.context.object
+        obj = bpy.context.object
         if (
-            type(object) != type(None)
-            and object.type == "MESH"
+            obj is not None
+            and obj.type == "MESH"
             and bpy.context.mode == "OBJECT"
         ):
             armature = utils.findArmature()
             if armature is not None:
                 has_child_constraint = False
-                for constraint in object.constraints:
+                for constraint in obj.constraints:
                     if constraint.type == "CHILD_OF":
                         has_child_constraint = True
                 if not has_child_constraint:
@@ -246,23 +235,23 @@ class CreateConstraintBone(bpy.types.Operator):
         return False
 
     def execute(self, context):
-        object = bpy.context.view_layer.objects.active
+        obj = bpy.context.view_layer.objects.active
         armature = utils.findArmature()
 
         bpy.context.view_layer.objects.active = armature
         utils.setModeToEdit()
 
-        bone = armature.data.edit_bones.new(object.name)
+        bone = armature.data.edit_bones.new(obj.name)
         bone.tail = bone.head + mathutils.Vector((0.0, 0.0, 1.0))
-        bone.matrix = object.matrix_world
-        object.location = mathutils.Vector((0.0, 0.0, 0.0))
-        object.rotation_euler = mathutils.Euler((0.0, 0.0, 0.0), "XYZ")
-        constraint = object.constraints.new("CHILD_OF")
+        bone.matrix = obj.matrix_world
+        obj.location = mathutils.Vector((0.0, 0.0, 0.0))
+        obj.rotation_euler = mathutils.Euler((0.0, 0.0, 0.0), "XYZ")
+        constraint = obj.constraints.new("CHILD_OF")
         constraint.target = armature
         constraint.subtarget = bone.name
 
         utils.setModeToObject()
-        bpy.context.view_layer.objects.active = object
+        bpy.context.view_layer.objects.active = obj
         return {"FINISHED"}
 
 
@@ -286,7 +275,7 @@ class CopyProxyNameToSelected(bpy.types.Operator):
         return {"FINISHED"}
 
 
-class skeletonEnumClass(PropertyGroup):
+class skeletonEnumClass(bpy.types.PropertyGroup):
     skeletonEnum: EnumProperty(
         name="Active Skeleton",
         description="skeleton that is exported",
@@ -358,18 +347,6 @@ class ALAMO_PT_ObjectPanel(bpy.types.Panel):
         col = layout.column()
         col.scale_y = 1.25
         col.operator("alamo.create_constraint_bone")
-
-
-class ALAMO_PT_ArmatureSettingsPanel(bpy.types.Panel):
-
-    bl_label = "Armature"
-    bl_space_type = "VIEW_3D"
-    bl_region_type = "UI"
-    bl_category = "ALAMO"
-
-    def draw(self, context):
-        layout = self.layout
-        scene = context.scene
 
 
 class ALAMO_PT_EditBonePanel(bpy.types.Panel):
@@ -560,80 +537,6 @@ class ALAMO_PT_DebugPanel(bpy.types.Panel):
                 c.prop(poseBone, "proxyIsHiddenAnimation")
 
 
-class ALAMO_PT_materialPropertyPanel(bpy.types.Panel):
-    bl_label = "Alamo Shader Properties"
-    bl_id = "ALAMO_PT_materialPropertyPanel"
-    bl_space_type = "PROPERTIES"
-    bl_region_type = "WINDOW"
-    bl_context = "material"
-
-    def draw(self, context):
-        object = context.object
-        layout = self.layout
-        col = layout.column()
-
-        # if type(object) != type(None) and object.type == "MESH":
-        if type(object) != type(None) and object.type == "MESH":
-            material = bpy.context.active_object.active_material
-            if material is not None:
-                # a None image is needed to represent not using a texture
-                if "None" not in bpy.data.images:
-                    bpy.data.images.new(name="None", width=1, height=1)
-                col.prop(material.shaderList, "shaderList")
-                if material.shaderList.shaderList != "alDefault.fx":
-                    shader_props = settings.material_parameter_dict[
-                        material.shaderList.shaderList
-                    ]
-                    for shader_prop in shader_props:
-                        # because contains() doesn't exist, apparently
-                        if shader_prop.find("Texture") > -1:
-                            layout.prop_search(
-                                material, shader_prop, bpy.data, "images"
-                            )
-                            # layout.template_ID(material, shader_prop, new="image.new", open="image.open")
-
-
-class ALAMO_PT_materialPropertySubPanel(bpy.types.Panel):
-    bl_label = "Additional Properties"
-    bl_parent_id = "ALAMO_PT_materialPropertyPanel"
-    bl_space_type = "PROPERTIES"
-    bl_region_type = "WINDOW"
-    bl_context = "material"
-    bl_options = {"DEFAULT_CLOSED"}
-
-    def draw(self, context):
-        object = context.object
-        layout = self.layout
-        col = layout.column()
-
-        if type(object) != type(None) and object.type == "MESH":
-            material = bpy.context.active_object.active_material
-            if (
-                material is not None
-                and material.shaderList.shaderList != "alDefault.fx"
-            ):
-                shader_props = settings.material_parameter_dict[
-                    material.shaderList.shaderList
-                ]
-                for shader_prop in shader_props:
-                    # because contains() doesn't exist, apparently
-                    if shader_prop.find("Texture") == -1:
-                        col.prop(material, shader_prop)
-
-
-class shaderListProperties(bpy.types.PropertyGroup):
-    mode_options = [
-        (shader_name, shader_name, "", "", index)
-        for index, shader_name in enumerate(settings.material_parameter_dict)
-    ]
-
-    shaderList: bpy.props.EnumProperty(
-        items=mode_options,
-        description="Choose ingame Shader",
-        default="alDefault.fx",
-    )
-
-
 class billboardListProperties(bpy.types.PropertyGroup):
     mode_options = [
         ("Disable", "Disable", "Description WIP", "", 0),
@@ -655,12 +558,8 @@ class billboardListProperties(bpy.types.PropertyGroup):
 
 # Registration ####################################################################################
 classes = (
-    *classes,
     skeletonEnumClass,
     billboardListProperties,
-    shaderListProperties,
-    ALAMO_PT_materialPropertyPanel,
-    ALAMO_PT_materialPropertySubPanel,
     ValidateFileButton,
     CreateConstraintBone,
     createConstraintBoneButton,
@@ -674,7 +573,7 @@ classes = (
     ALAMO_PT_EditBoneSubPanel,
     ALAMO_PT_AnimationPanel,
     ALAMO_PT_AnimationActionSubPanel,
-    # ALAMO_PT_DebugPanel,
+    ALAMO_PT_DebugPanel,
 )
 
 
@@ -693,9 +592,7 @@ def register():
     bpy.types.PoseBone.proxyIsHiddenAnimation = BoolProperty()
     bpy.types.EditBone.altDecreaseStayHidden = BoolProperty()
     bpy.types.EditBone.ProxyName = StringProperty(update=proxy_name_update)
-    bpy.types.EditBone.billboardMode = bpy.props.PointerProperty(
-        type=billboardListProperties
-    )
+    bpy.types.EditBone.billboardMode = bpy.props.PointerProperty(type=billboardListProperties)
 
     bpy.types.Object.HasCollision = BoolProperty()
     bpy.types.Object.Hidden = BoolProperty()

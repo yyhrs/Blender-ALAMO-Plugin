@@ -1,18 +1,5 @@
-from . import settings
-from . import utils
-from bpy.types import (
-    Panel,
-    PropertyGroup,
-)
-from bpy.props import (
-    StringProperty,
-    BoolProperty,
-    IntProperty,
-    FloatProperty,
-    EnumProperty,
-    PointerProperty,
-)
 import bpy
+from . import settings
 
 
 class ALAMO_PT_materialPropertyPanel(bpy.types.Panel):
@@ -57,11 +44,11 @@ class ALAMO_PT_materialPropertySubPanel(bpy.types.Panel):
     bl_options = {"DEFAULT_CLOSED"}
 
     def draw(self, context):
-        object = context.object
+        obj = context.object
         layout = self.layout
         col = layout.column()
 
-        if type(object) != type(None) and object.type == "MESH":
+        if obj is not None and obj.type == "MESH":
             material = bpy.context.active_object.active_material
             if (
                 material is not None
