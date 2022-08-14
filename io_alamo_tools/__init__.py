@@ -1,8 +1,3 @@
-from . import_alo import ALO_Importer
-from . export_ala import ALA_Exporter
-from . export_alo import ALO_Exporter
-from . import_ala import ALA_Importer
-from . import validation
 from bpy.types import (Panel,
                        Operator,
                        PropertyGroup,
@@ -17,6 +12,8 @@ from bpy.props import (StringProperty,
 from bpy.props import *
 import mathutils
 import bpy
+import importlib
+
 bl_info = {
     "name": "ALAMO Tools",
     "author": "Gaukler, evilbobthebob, inertial",
@@ -24,9 +21,6 @@ bl_info = {
     "blender": (2, 93, 0),
     "category": "Import-Export"
 }
-
-import bpy
-import importlib
 
 ADDON_FOLDER = 'io_alamo_tools'
 
