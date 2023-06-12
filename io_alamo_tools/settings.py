@@ -40,7 +40,8 @@ material_parameter_dict = {
     "Tree.fx": ["Emissive", "Diffuse", "Specular", "Shininess", "BendScale", "BaseTexture", "NormalTexture"],
     "LightProxy.fx": ["Diffuse"],
     "MeshBumpSpecColorize.fx": ["Emissive", "Diffuse", "Specular", "Shininess", "Colorization", "UVOffset",
-                            "BaseTexture", "NormalTexture", "GlossTexture"]
+                            "BaseTexture", "NormalTexture", "GlossTexture"],
+    "MeshAdditiveOffset.fx": ["BaseTexture", "UVOffset"]
 }
 
 vertex_format_dict = {
@@ -73,7 +74,8 @@ vertex_format_dict = {
     "TerrainMeshGloss.fx"   : "alD3dVertNU2",
     "Tree.fx"               : "alD3dVertNU2",
     "LightProxy.fx"         : "alD3dVertNU2",
-    "MeshBumpSpecColorize.fx"   : "alD3dVertNU2U3U3"
+    "MeshBumpSpecColorize.fx"   : "alD3dVertNU2U3U3",
+    "MeshAdditiveOffset.fx" : "alD3dVertNU2"
 }
 
 billboard_array = {"Disable":0, "Parallel":1, "Face":2, "ZAxis View": 3, "ZAxis Light":4, "ZAxis Wind":5, "Sunlight Glow":6, "Sun":7}
