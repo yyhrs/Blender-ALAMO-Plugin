@@ -16,8 +16,8 @@ import importlib
 
 bl_info = {
     "name": "ALAMO Tools",
-    "author": "Gaukler, evilbobthebob, inertial",
-    "version": (0, 0, 3, 4),
+    "author": "Gaukler, evilbobthebob, inertial, 1138",
+    "version": (0, 0, 3, 5),
     "blender": (2, 93, 0),
     "category": "Import-Export"
 }
