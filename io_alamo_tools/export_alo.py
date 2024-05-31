@@ -68,10 +68,14 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
             description="Export all animation actions as .ALA files, into the same directory",
             default=True,
             )
-
     exportHiddenObjects : BoolProperty(
             name="Export Hidden Objects",
             description="Export all objects, regardless of if they are hidden",
+            default=False,
+            )
+    checkshadowObjects : BoolProperty(
+            name="Check Shadow Objects",
+            description="Export all shadows, regardless of if they have non-manifold",
             default=True,
             )
 
@@ -96,10 +100,9 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
         layout = self.layout
         layout.use_property_split = True
 
-        row = layout.row()
-        row.prop(self, "exportAnimations")
-        row = layout.row()
-        row.prop(self, "exportHiddenObjects")
+        layout.prop(self, "exportAnimations")
+        layout.prop(self, "exportHiddenObjects")
+        layout.prop(self, "checkshadowObjects")
 
         row = layout.row(heading="Names From")
         row.use_property_split = False
@@ -499,6 +502,7 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
             uv_layer = mesh.uv_layers.active.data
             loop_to_alo_index = {}   #dictionary that maps blender vertex indices to the corresponding alo index
                                         #only smooth shaded faces are saved here, as flat shaded faces need duplicate vertices anyway
+            vertex_index_map = {}
 
             alo_index = 0
             for face in faces:
@@ -507,6 +511,8 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
                     vert = loop.vert
                     store_vertex = True
 
+                    key = (vert.index, face.normal.x, face.normal.y, face.normal.z, uv_layer[loop.index].uv.x, uv_layer[loop.index].uv.y)
+                    
                     if face.smooth:
                         for adjacent_loop in vert.link_loops:
                             if adjacent_loop != loop and uv_layer[loop.index].uv == uv_layer[adjacent_loop.index].uv:
@@ -515,7 +521,9 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
                                     face_indices.append(loop_to_alo_index[adjacent_loop.index])
                                     store_vertex = False
                                     break
-
+                    elif key in vertex_index_map:
+                        face_indices.append(vertex_index_map[key])
+                        store_vertex = False
 
                     if store_vertex:
                         vertex = vertexData()
@@ -538,6 +546,8 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
 
                         if face.smooth:
                             loop_to_alo_index[loop.index] = alo_index
+                        else:
+                            vertex_index_map[key] = alo_index     
 
                         vertex.face_index = face.index
 
@@ -556,7 +566,9 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
 
             vertices = []
             face_indices = []
-
+            
+            vertex_index_map = {}
+            
             alo_index = 0
             for face in bm.faces:
                 indexArray = {}
@@ -564,87 +576,80 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
                     vertex = vertexData()
                     vertex.co = vert.co
                     vertex.normal = face.normal
-
-                    vertex.uv =  mathutils.Vector((0, 0))
-
-                    meshVertex = mesh.vertices[vert.index]
-                    vertex.bone_index = getMaxWeightGroupIndex(meshVertex)
-                    if(vertex.bone_index == None):
-                        vertex.bone_index = 0
-
-
-                    vertices.append(vertex)
-                    face_indices.append(alo_index)
-
-                    indexArray[vert.index] = alo_index
-                    alo_index += 1
+                    key = (vert.index, face.normal.x, face.normal.y, face.normal.z)
+                    if key in vertex_index_map:
+                        indexArray[vert.index] = vertex_index_map[key]
+                        face_indices.append(vertex_index_map[key])
+                    else:
+                        vertex_index_map[key] = alo_index            
+                        vertex.uv =  mathutils.Vector((0, 0))
+                        meshVertex = mesh.vertices[vert.index]
+                        vertex.bone_index = getMaxWeightGroupIndex(meshVertex)
+                        if(vertex.bone_index == None):
+                            vertex.bone_index = 0
+                        vertices.append(vertex)
+                        face_indices.append(alo_index)
+                        indexArray[vert.index] = alo_index
+                        alo_index += 1
                 per_face_vertex_id[face.index] = indexArray
-
 
             for edge in bm.edges:
                 face1 = edge.link_faces[0]
                 face2 = edge.link_faces[1]
 
-                f1v1 = per_face_vertex_id[face1.index][edge.verts[0].index]
-                f1v2 = per_face_vertex_id[face1.index][edge.verts[1].index]
+                if face1.normal != face2.normal:
+                    f1v1 = per_face_vertex_id[face1.index][edge.verts[0].index]
+                    f1v2 = per_face_vertex_id[face1.index][edge.verts[1].index]
 
-                f2v1 = per_face_vertex_id[face2.index][edge.verts[0].index]
-                f2v2 = per_face_vertex_id[face2.index][edge.verts[1].index]
+                    f2v1 = per_face_vertex_id[face2.index][edge.verts[0].index]
+                    f2v2 = per_face_vertex_id[face2.index][edge.verts[1].index]
 
-                mid1 = mathutils.Vector((0, 0, 0))
-                for vert in face1.verts:
-                    mid1 += vert.co
-                mid1 /= 3
+                    mid1 = mathutils.Vector((0, 0, 0))
+                    for vert in face1.verts:
+                        mid1 += vert.co
+                    mid1 /= 3
 
-                mid2 = mathutils.Vector((0, 0, 0))
-                for vert in face2.verts:
-                    mid2 += vert.co
-                mid2 /= 3
+                    mid2 = mathutils.Vector((0, 0, 0))
+                    for vert in face2.verts:
+                        mid2 += vert.co
+                    mid2 /= 3
 
 
-                face1v1 = edge.verts[0].co * 0.75 + mid1 * 0.25
-                face1v2 = edge.verts[1].co * 0.75 + mid1 * 0.25
-                face2v1 = edge.verts[0].co * 0.75 + mid2 * 0.25
-                face2v2 = edge.verts[1].co * 0.75 + mid2 * 0.25
+                    face1v1 = edge.verts[0].co * 0.75 + mid1 * 0.25
+                    face1v2 = edge.verts[1].co * 0.75 + mid1 * 0.25
+                    face2v1 = edge.verts[0].co * 0.75 + mid2 * 0.25
+                    face2v2 = edge.verts[1].co * 0.75 + mid2 * 0.25
 
-                out = face1.normal + face2.normal
+                    out = face1.normal + face2.normal
 
-                #first face
-                edge1 = face1v1 - face2v1
-                edge2 = face1v2 - face2v1
+                    #first face
+                    edge1 = face1v1 - face2v1
+                    edge2 = face1v2 - face2v1
 
-                cross = mathutils.Vector.cross(edge1, edge2)
-                dot = mathutils.Vector.dot(out, cross)
+                    cross = mathutils.Vector.cross(edge1, edge2)
+                    dot = mathutils.Vector.dot(out, cross)
 
-                if dot < 0:
-                    face_indices.append(f1v1)
-                    face_indices.append(f2v1)
-                    face_indices.append(f1v2)
-                else:
-                    face_indices.append(f1v1)
-                    face_indices.append(f1v2)
-                    face_indices.append(f2v1)
-
-                #second face
-                edge1 = face1v1 - face2v1
-                edge2 = face1v2 - face2v1
-
-                cross = mathutils.Vector.cross(edge1, edge2)
-                dot = mathutils.Vector.dot(out, cross)
-
-                if dot < 0:
-                    face_indices.append(f2v2)
-                    face_indices.append(f1v2)
-                    face_indices.append(f2v1)
-                else:
-                    face_indices.append(f2v2)
-                    face_indices.append(f2v1)
-                    face_indices.append(f1v2)
+                    if dot < 0:
+                        # print("dot " + str(dot))
+                        face_indices.append(f1v1)
+                        face_indices.append(f2v1)
+                        face_indices.append(f1v2)
+                        face_indices.append(f2v2)
+                        face_indices.append(f1v2)
+                        face_indices.append(f2v1)
+                    else:
+                        face_indices.append(f1v1)
+                        face_indices.append(f1v2)
+                        face_indices.append(f2v1)
+                        face_indices.append(f2v2)
+                        face_indices.append(f2v1)
+                        face_indices.append(f1v2)
 
             return [vertices, face_indices]
 
         def create_sub_mesh_data_chunk(mesh, material, object, bone_name_per_alo_index):
 
+            print(mesh.name)
             sub_mesh_data_header = b"\x00\x00\x01\00"
             sub_mesh_data_header += utils.pack_int(0)
             file.write(sub_mesh_data_header)
@@ -863,6 +868,8 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
                     chunk += mat_tex_chunk("WaveTexture", material.WaveTexture)
                 elif (parameter == "DistortionTexture"):
                     chunk += mat_tex_chunk("DistortionTexture", material.DistortionTexture)
+                elif (parameter == "SpecularTexture"):
+                    chunk += mat_tex_chunk("SpecularTexture", material.SpecularTexture)
                 elif (parameter == "UVScrollRate"):
                     chunk += mat_float4_chunk("UVScrollRate", material.UVScrollRate)
                 elif (parameter == "DistortionScale"):
@@ -1343,6 +1350,84 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
             with disable_exception_traceback():
                 raise Exception('ALAMO - EXPORT FAILED')
 
+        def checkShadowMesh(mesh_list):  #checks if shadow meshes are correct and checks if material is missing
+            for object in mesh_list:
+                if len(object.data.materials) == 0:
+                    raise RuntimeError('Missing material on object: ' + object.name)
+                shader = object.data.materials[0].shaderList.shaderList
+                if shader == 'MeshShadowVolume.fx' or shader == 'RSkinShadowVolume.fx':
+                    bm = bmesh.new()  # create an empty BMesh
+                    bm.from_mesh(object.data)  # fill it in from a Mesh
+                    bm.verts.ensure_lookup_table()
+
+                    for vertex in bm.verts:
+                        if not vertex.is_manifold:
+                            bm.free()
+                            selectNonManifoldVertices(object)
+                            raise RuntimeError('Non manifold geometry shadow mesh: ' + object.name)
+
+                    for edge in bm.edges:
+                        if len(edge.link_faces) < 2 :
+                            bm.free()
+                            selectNonManifoldVertices(object)
+                            raise RuntimeError('Non manifold geometry shadow mesh: ' + object.name)
+
+                    bm.free()
+
+
+        def checkUV(mesh_list):  #throws error if object lacks UVs
+            for object in mesh_list:
+                for material in object.data.materials:
+                    if material.shaderList.shaderList == 'MeshShadowVolume.fx' or material.shaderList.shaderList == 'RSkinShadowVolume.fx':
+                        if len(object.data.materials) > 1:
+                            raise RuntimeError('Multiple materials on shadow volume: ' + object.name + ' , remove additional materials')
+                        else:
+                            return
+                    if object.HasCollision:
+                        if len(object.data.materials) > 1:
+                            raise RuntimeError('Multiple submeshes/materials on collision mesh: ' + object.name + ' , remove additional materials')
+                if object.data.uv_layers:   #or material.shaderList.shaderList in settings.no_UV_Shaders:  #currently UVs are needed for everything but shadows
+                    continue
+                else:
+                    raise RuntimeError('Missing UV: ' + object.name)
+
+        def checkInvalidArmatureModifier(mesh_list): #throws error if armature modifier lacks rig, this would crash the exporter later and checks if skeleton in modifier doesn't match active skeleton
+            activeSkeleton = bpy.context.scene.ActiveSkeleton.skeletonEnum
+            for object in mesh_list:
+                for modifier in object.modifiers:
+                    if modifier.type == "ARMATURE":
+                        if modifier.object == None:
+                            raise RuntimeError('Armature modifier without selected skeleton on: ' + object.name)
+                            return True
+                        elif modifier.object.type != 'NoneType':
+                            if modifier.object.name != activeSkeleton:
+                                raise RuntimeError('Armature modifier skeleton doesnt match active skeleton on: ' + object.name)
+                                return True
+                for constraint in object.constraints:
+                    if constraint.type == 'CHILD_OF':
+                        if constraint.target is not None:
+                            #print(type(constraint.target))
+                            if constraint.target.name != activeSkeleton:
+                                raise RuntimeError('Constraint doesnt match active skeleton on: ' + object.name)
+                                return True
+
+        def checkFaceNumber(mesh_list):  #checks if the number of faces exceeds max ushort, which is used to save the indices
+            for object in mesh_list:
+                if len(object.data.polygons) > 65535:
+                    raise RuntimeError('Face number exceeds uShort max on object: ' + object.name + ' split mesh into multiple objects')
+                    return True
+
+        def checkTranslation(mesh_list): #prints warning when translation is not default
+            for object in mesh_list:
+                if object.location != mathutils.Vector((0.0, 0.0, 0.0)) or object.rotation_euler != mathutils.Euler((0.0, 0.0, 0.0), 'XYZ') or object.scale != mathutils.Vector((1.0, 1.0, 1.0)):
+                    print('Warning: ' + object.name + ' is not aligned with the world origin, apply translation or bind to bone')
+
+        def checkTranslationArmature(): #prints warning when translation is not default
+            armature = utils.findArmature()
+            if armature != None:
+                if armature.location != mathutils.Vector((0.0, 0.0, 0.0)) or armature.rotation_euler != mathutils.Euler((0.0, 0.0, 0.0), 'XYZ') or armature.scale != mathutils.Vector((1.0, 1.0, 1.0)):
+                    print('Warning: active Armature is not aligned with the world origin')
+
         def unhide():
             hiddenList = []
             for object in bpy.data.objects:
@@ -1403,12 +1488,14 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
         mesh_list = validation.create_export_list(bpy.context.scene.collection, self.exportHiddenObjects, self.useNamesFrom)
 
         #check if export objects satisfy requirements (has material, UVs, ...)
-        messages = validation.validate(mesh_list)
         
-        if messages is not None and len(messages) > 0:
-            for message in messages:
-                self.report(*message)
-            exportFailed()
+        if(self.checkshadowObjects):
+            checkShadowMesh(mesh_list)
+        checkUV(mesh_list)
+        checkFaceNumber(mesh_list)
+        checkTranslation(mesh_list)
+        checkTranslationArmature()
+        checkInvalidArmatureModifier(mesh_list)
 
         hiddenList = unhide()
         collection_is_hidden_list = unhide_collections(bpy.context.scene.collection)
@@ -1416,8 +1503,8 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
         path = self.properties.filepath
 
         global file
-        if os.access(path, os.W_OK) or not os.access(path, os.F_OK):
-            file = open(path, 'wb')  # open file in read binary mode
+
+        file = open(path, 'wb')  # open file in read binary mode
 
             bone_name_per_alo_index = create_skeleton()
             create_mesh(mesh_list, bone_name_per_alo_index)
