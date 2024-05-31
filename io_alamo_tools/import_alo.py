@@ -586,35 +586,80 @@ class ALO_Importer(bpy.types.Operator):
             nt = material.node_tree
             nodes = nt.nodes
             links = nt.links
-            while(nodes): nodes.remove(nodes[0])
-            output  = nodes.new("ShaderNodeOutputMaterial")
-            bsdf = nodes.new("ShaderNodeBsdfPrincipled")
-            base_image_node = nodes.new("ShaderNodeTexImage")
-            invert_color_node = nodes.new("ShaderNodeInvert")
-            normal_image_node = nodes.new("ShaderNodeTexImage")
-            if material.BaseTexture != 'None':
-                links.new(output.inputs['Surface'], bsdf.outputs['BSDF'])
-                links.new(bsdf.inputs['Base Color'], base_image_node.outputs['Color'])
-                links.new(invert_color_node.inputs['Color'], base_image_node.outputs['Alpha'])
-                links.new(bsdf.inputs['Alpha'], invert_color_node.outputs['Color'])
-                if material.BaseTexture in bpy.data.images:
-                    diffuse_texture = bpy.data.images[material.BaseTexture]
-                    base_image_node.image = diffuse_texture
-            if material.NormalTexture != 'None':
-                normal_map_node = nodes.new("ShaderNodeNormalMap")
-                normal_map_node.space = 'TANGENT'
-                links.new(normal_image_node.outputs['Color'], normal_map_node.inputs['Color'])
-                links.new(normal_map_node.outputs['Normal'], bsdf.inputs['Normal'])
-                if material.NormalTexture in bpy.data.images:
-                    normal_texture = bpy.data.images[material.NormalTexture]
-                    normal_image_node.image = normal_texture
-                normal_image_node.location.y = -400
-                normal_map_node.location.x = normal_image_node.location.x + normal_image_node.width + 100
-                normal_map_node.location.y = -400
-            invert_color_node.location.x = base_image_node.location.x + base_image_node.width + 100
-            invert_color_node.location.y = -200
-            bsdf.location.x = invert_color_node.location.x + invert_color_node.width + 100
-            output.location.x = bsdf.location.x + bsdf.width + 100
+            
+            # clean up
+            while(nodes):
+                nodes.remove(nodes[0])
+
+            output = nodes.new("ShaderNodeOutputMaterial")
+            custom_node_name = material.name + "Group"
+            my_group = 'null'
+
+            if ("Additive" in material.shaderList.shaderList):
+                material.blend_method = "BLEND"
+                my_group = material_group_additive(
+                    self, context, custom_node_name, material, True)
+                mat_group = nt.nodes.new("ShaderNodeGroup")
+                mat_group.node_tree = bpy.data.node_groups[my_group.name]
+                mat_group.location.x -= 200.0
+                links.new(mat_group.outputs[0], output.inputs['Surface'])
+            elif ("Alpha" in material.shaderList.shaderList):
+                material.blend_method = "BLEND"
+                my_group = material_group_additive(
+                    self, context, custom_node_name, material, False)
+                mat_group = nt.nodes.new("ShaderNodeGroup")
+                mat_group.node_tree = bpy.data.node_groups[my_group.name]
+                mat_group.location.x -= 200.0
+                links.new(mat_group.outputs[0], output.inputs['Surface'])
+            else:
+                bsdf = nodes.new("ShaderNodeBsdfPrincipled")
+                bsdf.inputs[4].default_value = 0.1  # Set metallic to 0.1
+                bsdf.inputs[7].default_value = 0.2  # Set roughness to 0.2
+                bsdf.location.x -= 300.0
+                links.new(bsdf.outputs['BSDF'], output.inputs['Surface'])
+                my_group = material_group_basic(
+                    self, context, custom_node_name, material)
+                mat_group = nt.nodes.new("ShaderNodeGroup")
+                mat_group.node_tree = bpy.data.node_groups[my_group.name]
+                mat_group.location.x -= 500.0
+                links.new(mat_group.outputs[0], bsdf.inputs['Base Color'])
+                links.new(mat_group.outputs[1], bsdf.inputs[5])
+                links.new(mat_group.outputs[2], bsdf.inputs['Normal'])
+
+        def create_material(currentSubMesh):
+            if currentSubMesh.material.name != "DUMMYMATERIAL":
+                return
+
+            oldMat = currentSubMesh.material
+
+            texName = currentSubMesh.material.BaseTexture
+            texName = texName[0:len(texName) - 4] + " Material"
+            if texName in bpy.data.materials and oldMat.shaderList.shaderList != bpy.data.materials.get(texName).shaderList.shaderList:
+                texName += "1"
+            mat = assign_material(texName)
+
+            mat.shaderList.shaderList = oldMat.shaderList.shaderList
+
+            # TODO: Extract set_alamo_shader's shader finder to new function, use that here.
+            material_props = ["BaseTexture", "NormalTexture", "GlossTexture", "WaveTexture", "DistortionTexture", "CloudTexture", "CloudNormalTexture", "Emissive", "Diffuse", "Specular", "Shininess", "Colorization", "DebugColor", "UVOffset", "Color", "UVScrollRate", "DiffuseColor",
+                              "EdgeBrightness", "BaseUVScale", "WaveUVScale", "DistortUVScale", "BaseUVScrollRate", "WaveUVScrollRate", "DistortUVScrollRate", "BendScale", "Diffuse1", "CloudScrollRate", "CloudScale", "SFreq",  "TFreq", "DistortionScale", "Atmosphere", "CityColor", "AtmospherePower", "SpecularTexture"]
+
+            for texture in material_props:
+                if texture in oldMat:
+                    mat[texture] = oldMat[texture]
+
+            obj = bpy.context.object
+
+            obj.data.materials.clear()
+            obj.data.materials.append(mat)
+            currentSubMesh.material = mat
+
+        def assign_material(name):
+            if name in bpy.data.materials:
+                return bpy.data.materials.get(name)
+            else:
+                return bpy.data.materials.new(name)
+
 
         def create_object(currentMesh):
             global mesh
@@ -707,10 +752,6 @@ class ALO_Importer(bpy.types.Operator):
             
             load_image(texture_name)
             exec('material.' + texture_function_name + '= texture_name')
-
-                load_image(texture_name)
-                if texture_function_name != "SpecularTexture":
-                    exec('material.' + texture_function_name + '= texture_name')
 
         def createUVLayer(layerName, uv_coordinates):
             vert_uvs = uv_coordinates
@@ -887,6 +928,25 @@ class ALO_Importer(bpy.types.Operator):
                 counter += 1
             file.seek(1, 1)  # skip end byte of name
             return string
+        
+        def hideObject(object):
+
+            # set correct area type via context overwrite
+            context_override = bpy.context.copy()
+            area = None
+            for window in bpy.context.window_manager.windows:
+                screen = window.screen
+                for a in screen.areas:
+                    if a.type == 'VIEW_3D':
+                        area = a
+                        break
+
+            context_override['area'] = area
+
+            bpy.ops.object.select_all(context_override, action='DESELECT')
+            object.select_set(True)
+            bpy.ops.object.hide_view_set(context_override)
+            object.hide_render = True
 
         def hideLODs():
             # hides all but the most detailed LOD in Blender
@@ -901,7 +961,8 @@ class ALO_Importer(bpy.types.Operator):
                         # hide smaller LODS
                         counter = 0
                         while(counter < lodCounter-1):
-                            bpy.data.objects[object.name[:-1] + str(counter)].hide_set(True)
+                            hideObject(
+                                bpy.data.objects[object.name[:-1] + str(counter)])
                             counter += 1
 
             # hide object if its a shadow or a collision
@@ -910,13 +971,13 @@ class ALO_Importer(bpy.types.Operator):
                     if len(object.material_slots) != 0:
                         shader = object.material_slots[0].material.shaderList.shaderList
                         if(shader == 'MeshCollision.fx' or shader == 'RSkinShadowVolume.fx' or shader == 'MeshShadowVolume.fx'):
-                            object.hide_set(True)
+                            hideObject(object)
 
             # hide objects that are set to not visible
             for object in bpy.data.objects:
                 if (object.type == 'MESH'):
                     if object.Hidden == True:
-                        object.hide_set(True)
+                        hideObject(object)
 
         def deleteRoot():
             armature = utils.findArmature()
@@ -966,9 +1027,9 @@ class ALO_Importer(bpy.types.Operator):
                     return
 
         def validate_material_prop(name):
-            material_props = ["BaseTexture", "NormalTexture", "GlossTexture", "WaveTexture", "DistortionTexture", "CloudTexture", "CloudNormalTexture", "Emissive", "Diffuse", "Specular","Shininess","Colorization" \
-                ,"DebugColor","UVOffset","Color","UVScrollRate","DiffuseColor","EdgeBrightness","BaseUVScale","WaveUVScale","DistortUVScale","BaseUVScrollRate","WaveUVScrollRate","DistortUVScrollRate","BendScale" \
-                , "Diffuse1","CloudScrollRate","CloudScale", "SFreq",  "TFreq", "DistortionScale", "Atmosphere", "CityColor", "AtmospherePower", "SpecularTexture"]
+            material_props = ["BaseTexture", "NormalTexture", "GlossTexture", "WaveTexture", "DistortionTexture", "CloudTexture", "CloudNormalTexture", "Emissive", "Diffuse", "Specular", "Shininess", "Colorization" \
+                , "DebugColor", "UVOffset", "Color", "UVScrollRate", "DiffuseColor", "EdgeBrightness", "BaseUVScale", "WaveUVScale", "DistortUVScale", "BaseUVScrollRate", "WaveUVScrollRate", "DistortUVScrollRate", "BendScale" \
+                , "Diffuse1", "CloudScrollRate", "CloudScale", "SFreq", "TFreq", "DistortionScale", "Atmosphere", "CityColor", "AtmospherePower", "SpecularTexture"]
 
             if(name in material_props):
                 return True

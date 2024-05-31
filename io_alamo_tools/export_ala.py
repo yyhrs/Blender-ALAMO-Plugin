@@ -395,9 +395,9 @@ def create_visibility_chunk(armature, bone):
     dataExists = False
     for curve in armature.animation_data.action.fcurves:
         # by spliting and comparing the data path we know which bone has rotation/location keyframes
-        parts = curve.data_path.split('"');
+        parts = curve.data_path.split('"')
         if (parts[2] == '].proxyIsHiddenAnimation'):
-            if parts[1] == bone.name or (bone.parent != None and bone.parent.name == parts[1]):
+            if parts[1] == bone.name or (bone.parent is not None and bone.parent.name == parts[1]):
                 dataExists = True
                 break
 
@@ -410,7 +410,7 @@ def create_visibility_chunk(armature, bone):
     pose = armature.pose.bones[bone.name]
     
     parentPose = {}
-    if bone.parent != None:
+    if bone.parent is not None:
         parentPose = armature.pose.bones[bone.parent.name]
     else:
         parentPose = None
@@ -420,7 +420,7 @@ def create_visibility_chunk(armature, bone):
 
     scene.frame_set(0)
     while scene.frame_current <= animLength:
-        if pose.proxyIsHiddenAnimation == True or (parentPose != None and parentPose.proxyIsHiddenAnimation):
+        if pose.proxyIsHiddenAnimation or (parentPose is not None and parentPose.proxyIsHiddenAnimation):
             binary += '0'
         else:
             binary += '1'

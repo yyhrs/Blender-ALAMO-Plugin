@@ -93,6 +93,7 @@ def register():
     bpy.types.Material.NormalDetailTexture = bpy.props.StringProperty(default="None")
     bpy.types.Material.NormalTexture = bpy.props.StringProperty(default="None")
     bpy.types.Material.GlossTexture = bpy.props.StringProperty(default="None")
+    bpy.types.Material.SpecularTexture = bpy.props.StringProperty(default="None")
     bpy.types.Material.WaveTexture = bpy.props.StringProperty(default="None")
     bpy.types.Material.DistortionTexture = bpy.props.StringProperty(default="None")
     bpy.types.Material.CloudTexture = bpy.props.StringProperty(default="None")
@@ -206,6 +207,7 @@ def unregister():
     bpy.types.Material.GlossTexture
     bpy.types.Material.WaveTexture
     bpy.types.Material.DistortionTexture
+    bpy.types.Material.SpecularTexture
     bpy.types.Material.CloudTexture
     bpy.types.Material.CloudNormalTexture
 

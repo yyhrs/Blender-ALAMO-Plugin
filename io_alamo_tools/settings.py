@@ -7,7 +7,7 @@ material_parameter_dict = {
 	"Grass.fx": ["Emissive", "Diffuse", "Diffuse1", "BendScale", "BaseTexture"],
 	"MeshAdditive.fx": ["BaseTexture", "UVScrollRate", "Color"],
 	"MeshAlpha.fx": ["Emissive", "Diffuse", "Specular", "Shininess", "BaseTexture"],
-	"MeshAlphaScroll.fx": ["Emissive", "Diffuse", "Specular", "Shininess", "BaseTexture"],
+	"MeshAlphaScroll.fx": ["Emissive", "Diffuse", "Specular", "Shininess", "UVScrollRate" "BaseTexture"],
 	"MeshBumpColorize.fx": ["Emissive", "Diffuse", "Specular", "Shininess", "Colorization", "UVOffset",
 							"BaseTexture", "NormalTexture"],
 	"MeshBumpColorizeVertex.fx": ["Emissive", "Diffuse", "Specular", "Shininess", "Colorization", "UVOffset",
@@ -39,6 +39,10 @@ material_parameter_dict = {
 	"TerrainMeshGloss.fx": ["Emissive", "Diffuse", "Specular", "Shininess", "BaseTexture"],
 	"Tree.fx": ["Emissive", "Diffuse", "Specular", "Shininess", "BendScale", "BaseTexture", "NormalTexture"],
 	"LightProxy.fx": ["Diffuse"],
+    "MeshBumpSpecColorize.fx": ["Emissive", "Diffuse", "Specular", "Shininess", "Colorization", "UVOffset",
+                            "BaseTexture", "NormalTexture", "GlossTexture"],
+    "MeshAdditiveOffset.fx": ["BaseTexture", "UVOffset"],
+    "MeshAdditiveVColor.fx": ["BaseTexture", "UVScrollRate", "Color"],
 	"MeshAlphaGloss.fx": ["Emissive", "Diffuse", "Specular", "Shininess", "BaseTexture"],
 	"MeshBumpSpecGlowColorize.fx": ["Emissive", "Diffuse", "Colorization", "UVOffset", "BaseTexture", "NormalTexture", "SpecularTexture"],
 	"MeshBumpReflectColorize.fx": ["Emissive", "Diffuse", "Specular", "Shininess", "Colorization", "UVOffset",
@@ -75,6 +79,9 @@ vertex_format_dict = {
     "TerrainMeshGloss.fx"   : "alD3dVertNU2",
     "Tree.fx"               : "alD3dVertNU2",
     "LightProxy.fx"         : "alD3dVertNU2",
+    "MeshBumpSpecColorize.fx"   : "alD3dVertNU2U3U3",
+    "MeshAdditiveOffset.fx" : "alD3dVertNU2",
+    "MeshAdditiveVColor.fx"    : "alD3dVertNU2C",
     "MeshAlphaGloss.fx"     : "alD3dVertNU2",
     "MeshBumpSpecGlowColorize.fx" : "alD3dVertNU2C",
     "MeshBumpReflectColorize.fx"  : "alD3dVertNU2U3U3"
@@ -82,7 +89,7 @@ vertex_format_dict = {
 
 billboard_array = {"Disable":0, "Parallel":1, "Face":2, "ZAxis View": 3, "ZAxis Light":4, "ZAxis Wind":5, "Sunlight Glow":6, "Sun":7}
 
-bumpMappingList = ['MeshBumpColorize.fx', 'MeshBumpReflectColorize.fx', 'MeshBumpColorizeVertex.fx', 'MeshBumpColorizeDetail.fx', "MeshBumpLight.fx", "Planet.fx", "RSkinBumpColorize.fx", "TerrainMeshBump.fx", "Tree.fx"]
+bumpMappingList = ['MeshBumpColorize.fx', 'MeshBumpReflectColorize.fx', 'MeshBumpColorizeVertex.fx', 'MeshBumpColorizeDetail.fx', "MeshBumpLight.fx", "Planet.fx", "RSkinBumpColorize.fx", "TerrainMeshBump.fx", "Tree.fx", "MeshBumpSpecColorize.fx"]
 
 rotation_curve_name = ['].rotation_quaternion', '].rotation_euler']
 
