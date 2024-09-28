@@ -465,7 +465,7 @@ class ALO_Importer(bpy.types.Operator):
                 emissive = node_group.interface.new_socket(socket_type='NodeSocketFloat',
                                                            name='Emissive Strength',
                                                            in_out='INPUT')
-                emissive.default_value = 1.0
+                emissive.default_value = 100.0
                 color = node("ShaderNodeEmission")
                 link(group_in.outputs[0], color.inputs[1])
                 eevee_alpha_fix = node("ShaderNodeInvert")
@@ -659,8 +659,13 @@ class ALO_Importer(bpy.types.Operator):
                     mat[texture] = oldMat[texture]
 
             obj = bpy.context.object
-
+            materials = []
+            for material in obj.data.materials:
+                if material.name != "DUMMYMATERIAL":
+                    materials.append(material)
             obj.data.materials.clear()
+            for material in materials:
+                obj.data.materials.append(material)
             obj.data.materials.append(mat)
             currentSubMesh.material = mat
 
