@@ -623,8 +623,8 @@ class ALO_Importer(bpy.types.Operator):
                 links.new(mat_group.outputs[0], output.inputs['Surface'])
             else:
                 bsdf = nodes.new("ShaderNodeBsdfPrincipled")
-                bsdf.inputs[4].default_value = 0.1  # Set metallic to 0.1
-                bsdf.inputs[7].default_value = 0.2  # Set roughness to 0.2
+                bsdf.inputs['Metallic'].default_value = 0.1
+                bsdf.inputs['Roughness'].default_value = 0.2
                 bsdf.location.x -= 300.0
                 links.new(bsdf.outputs['BSDF'], output.inputs['Surface'])
                 my_group = material_group_basic(
