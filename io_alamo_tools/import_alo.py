@@ -587,7 +587,7 @@ class ALO_Importer(bpy.types.Operator):
                 normal_texture = bpy.data.images[material.NormalTexture]
                 normal_texture.alpha_mode = 'CHANNEL_PACKED'
                 normal_image_node.image = normal_texture
-                normal_image_node.image.colorspace_settings.name = 'Raw'
+                normal_image_node.image.colorspace_settings.name = 'Non-Color'
 
             return node_group
 
