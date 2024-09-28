@@ -815,9 +815,6 @@ class ALO_Importer(bpy.types.Operator):
             if validate_material_prop(name):
                 exec('material.' + name + '= value')
 
-        def setRenderToEevee():
-            bpy.context.scene.render.engine = 'BLENDER_EEVEE'
-
         def loadAnimations(filePath):
             #remove ending
             filePath = filePath[0:-4]
@@ -872,7 +869,6 @@ class ALO_Importer(bpy.types.Operator):
         global file
         filepath = self.properties.filepath
         file = open(filepath, 'rb') #open file in read binary mode
-        setRenderToEevee()
         process_active_junk()
         removeShadowDoubles()
         hideLODs()
