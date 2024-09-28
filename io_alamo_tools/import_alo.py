@@ -448,7 +448,7 @@ class ALO_Importer(bpy.types.Operator):
 
             group_out = node('NodeGroupOutput')
             group_out.location.x += 200.0
-            node_group.outputs.new('NodeSocketShader', 'Surface')
+            node_group.interface.new_socket(socket_type='NodeSocketShader', name='Surface', in_out='OUTPUT')
 
             mix_shader = node("ShaderNodeMixShader")
 
@@ -462,8 +462,9 @@ class ALO_Importer(bpy.types.Operator):
             if is_emissive:
                 group_in = node('NodeGroupInput')
                 group_in.location.x -= 700
-                emissive = node_group.inputs.new(
-                    'NodeSocketFloat', 'Emissive Strength')
+                emissive = node_group.interface.new_socket(socket_type='NodeSocketFloat',
+                                                           name='Emissive Strength',
+                                                           in_out='INPUT')
                 emissive.default_value = 1.0
                 color = node("ShaderNodeEmission")
                 link(group_in.outputs[0], color.inputs[1])
@@ -504,15 +505,24 @@ class ALO_Importer(bpy.types.Operator):
 
             group_in = node('NodeGroupInput')
             group_in.location.x -= 700
-            node_group.inputs.new('NodeSocketColor', 'Team Color')
-            spec = node_group.inputs.new(
-                'NodeSocketFloat', 'Specular Intensity')
+            node_group.interface.new_socket(socket_type='NodeSocketColor',
+                                            name='Team Color',
+                                            in_out='INPUT')
+            spec = node_group.interface.new_socket(socket_type='NodeSocketFloat',
+                                                   name='Specular Intensity',
+                                                   in_out='INPUT')
             spec.default_value = 0.1
 
             group_out = node('NodeGroupOutput')
-            node_group.outputs.new('NodeSocketColor', 'Base Color')
-            node_group.outputs.new('NodeSocketFloat', 'Specular')
-            node_group.outputs.new('NodeSocketVector', 'Normal')
+            node_group.interface.new_socket(socket_type='NodeSocketColor',
+                                            name='Base Color',
+                                            in_out='OUTPUT')
+            node_group.interface.new_socket(socket_type='NodeSocketFloat',
+                                            name='Specular',
+                                            in_out='OUTPUT')
+            node_group.interface.new_socket(socket_type='NodeSocketVector',
+                                            name='Normal',
+                                            in_out='OUTPUT')
 
             base_image_node = node("ShaderNodeTexImage")
             base_image_node.location.x -= 500
@@ -932,7 +942,6 @@ class ALO_Importer(bpy.types.Operator):
         def hideObject(object):
 
             # set correct area type via context overwrite
-            context_override = bpy.context.copy()
             area = None
             for window in bpy.context.window_manager.windows:
                 screen = window.screen
@@ -940,13 +949,11 @@ class ALO_Importer(bpy.types.Operator):
                     if a.type == 'VIEW_3D':
                         area = a
                         break
-
-            context_override['area'] = area
-
-            bpy.ops.object.select_all(context_override, action='DESELECT')
-            object.select_set(True)
-            bpy.ops.object.hide_view_set(context_override)
-            object.hide_render = True
+            with context.temp_override(area=area):
+                bpy.ops.object.select_all(action='DESELECT')
+                object.select_set(True)
+                bpy.ops.object.hide_view_set()
+                object.hide_render = True
 
         def hideLODs():
             # hides all but the most detailed LOD in Blender
