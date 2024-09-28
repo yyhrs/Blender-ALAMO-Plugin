@@ -1,5 +1,5 @@
 import bpy
-from . import settings, utils, export_ala
+from . import settings, utils, export_ala, validation
 
 from bpy.props import (StringProperty,
                        BoolProperty,
@@ -23,11 +23,34 @@ import sys
 import os
 import bmesh
 import copy
+from contextlib import contextmanager
 
-class ALO_Exporter(bpy.types.Operator):
+def skeletonEnumCallback(scene, context):
+    armatures = [('None', 'None', '', '', 0)]
+    counter = 1
+    for arm in bpy.data.objects:  # test if armature exists
+        if arm.type == 'ARMATURE':
+            armatures.append((arm.name, arm.name, '', '', counter))
+            counter += 1
+
+    return armatures
+
+
+@contextmanager
+def disable_exception_traceback():
+    """
+    All traceback information is suppressed and only the exception type and value are printed
+    Used to make user friendly errors
+    """
+    default_value = getattr(sys, "tracebacklimit", 1000)  # `1000` is a Python's default value
+    sys.tracebacklimit = 0
+    yield
+    sys.tracebacklimit = default_value  # revert changes
+
+class ALO_Exporter(bpy.types.Operator, ExportHelper):
 
     """ALO Exporter"""  # blender will use this as a tooltip for menu items and buttons.
-    bl_idname = "export.alo"  # unique identifier for buttons and menu items to reference.
+    bl_idname = "export_mesh.alo"  # unique identifier for buttons and menu items to reference.
     bl_label = "Export ALO File"  # display name in the interface.
     bl_options = {'REGISTER', 'UNDO'}  # enable undo for the operator.
     bl_info = {
@@ -48,20 +71,41 @@ class ALO_Exporter(bpy.types.Operator):
     exportHiddenObjects : BoolProperty(
             name="Export Hidden Objects",
             description="Export all objects, regardless of if they are hidden",
-            default=False,
-            )
-    checkshadowObjects : BoolProperty(
-            name="Check Shadow Objects",
-            description="Export all shadows, regardless of if they have non-manifold",
             default=True,
             )
 
+    useNamesFrom: EnumProperty(
+        name = "Use Names From",
+        description = "Whether the exporter should use object or mesh names.",
+        items=(
+            ('MESH', "Mesh", ""),
+            ('OBJECT', "Object", ""),
+        ),
+        default = 'MESH',
+    )
+
+    skeletonEnum : EnumProperty(
+        name='Active Skeleton',
+        description = "skeleton that is exported",
+        items = skeletonEnumCallback,
+    )
+
+
     def draw(self, context):
         layout = self.layout
+        layout.use_property_split = True
 
-        layout.prop(self, "exportAnimations")
-        layout.prop(self, "exportHiddenObjects")
-        layout.prop(self, "checkshadowObjects")
+        row = layout.row()
+        row.prop(self, "exportAnimations")
+        row = layout.row()
+        row.prop(self, "exportHiddenObjects")
+
+        row = layout.row(heading="Names From")
+        row.use_property_split = False
+        row.prop(self, "useNamesFrom", expand = True)
+
+        row = layout.row()
+        row.prop(bpy.context.scene.ActiveSkeleton, "skeletonEnum")
 
     def execute(self, context):  # execute() is called by blender when running the operator.
 
@@ -413,7 +457,7 @@ class ALO_Exporter(bpy.types.Operator):
                     for index in group_index_list:
                         if index == None:
                             cleanUpModifiers(object)
-                            raise RuntimeError('Missing vertex group on object: ' + object.name)
+                            self.report({"ERROR"}, f'ALAMO - Missing vertex group on object: {object.name}')
 
                     group_index_list.sort()
                     group_to_alo_index = {}
@@ -601,7 +645,6 @@ class ALO_Exporter(bpy.types.Operator):
 
         def create_sub_mesh_data_chunk(mesh, material, object, bone_name_per_alo_index):
 
-            print(mesh.name)
             sub_mesh_data_header = b"\x00\x00\x01\00"
             sub_mesh_data_header += utils.pack_int(0)
             file.write(sub_mesh_data_header)
@@ -1298,92 +1341,9 @@ class ALO_Exporter(bpy.types.Operator):
             #add 2147483648 instead of binary operation
             return size+2147483648
 
-        def selectNonManifoldVertices(object):
-            if(bpy.context.mode != 'OBJECT'):
-                bpy.ops.object.mode_set(mode='OBJECT')
-            object.hide_set(False)
-            bpy.context.view_layer.objects.active = object
-            bpy.ops.object.mode_set(mode='EDIT')
-            bpy.ops.mesh.select_all(action='DESELECT')
-            bpy.ops.mesh.select_non_manifold()
-
-        def checkShadowMesh(mesh_list):  #checks if shadow meshes are correct and checks if material is missing
-            for object in mesh_list:
-                if len(object.data.materials) == 0:
-                    raise RuntimeError('Missing material on object: ' + object.name)
-                shader = object.data.materials[0].shaderList.shaderList
-                if shader == 'MeshShadowVolume.fx' or shader == 'RSkinShadowVolume.fx':
-                    bm = bmesh.new()  # create an empty BMesh
-                    bm.from_mesh(object.data)  # fill it in from a Mesh
-                    bm.verts.ensure_lookup_table()
-
-                    for vertex in bm.verts:
-                        if not vertex.is_manifold:
-                            bm.free()
-                            selectNonManifoldVertices(object)
-                            raise RuntimeError('Non manifold geometry shadow mesh: ' + object.name)
-
-                    for edge in bm.edges:
-                        if len(edge.link_faces) < 2 :
-                            bm.free()
-                            selectNonManifoldVertices(object)
-                            raise RuntimeError('Non manifold geometry shadow mesh: ' + object.name)
-
-                    bm.free()
-
-
-        def checkUV(mesh_list):  #throws error if object lacks UVs
-            for object in mesh_list:
-                for material in object.data.materials:
-                    if material.shaderList.shaderList == 'MeshShadowVolume.fx' or material.shaderList.shaderList == 'RSkinShadowVolume.fx':
-                        if len(object.data.materials) > 1:
-                            raise RuntimeError('Multiple materials on shadow volume: ' + object.name + ' , remove additional materials')
-                        else:
-                            return
-                    if object.HasCollision:
-                        if len(object.data.materials) > 1:
-                            raise RuntimeError('Multiple submeshes/materials on collision mesh: ' + object.name + ' , remove additional materials')
-                if object.data.uv_layers:   #or material.shaderList.shaderList in settings.no_UV_Shaders:  #currently UVs are needed for everything but shadows
-                    continue
-                else:
-                    raise RuntimeError('Missing UV: ' + object.name)
-
-        def checkInvalidArmatureModifier(mesh_list): #throws error if armature modifier lacks rig, this would crash the exporter later and checks if skeleton in modifier doesn't match active skeleton
-            activeSkeleton = bpy.context.scene.ActiveSkeleton.skeletonEnum
-            for object in mesh_list:
-                for modifier in object.modifiers:
-                    if modifier.type == "ARMATURE":
-                        if modifier.object == None:
-                            raise RuntimeError('Armature modifier without selected skeleton on: ' + object.name)
-                            return True
-                        elif modifier.object.type != 'NoneType':
-                            if modifier.object.name != activeSkeleton:
-                                raise RuntimeError('Armature modifier skeleton doesnt match active skeleton on: ' + object.name)
-                                return True
-                for constraint in object.constraints:
-                    if constraint.type == 'CHILD_OF':
-                        if constraint.target is not None:
-                            #print(type(constraint.target))
-                            if constraint.target.name != activeSkeleton:
-                                raise RuntimeError('Constraint doesnt match active skeleton on: ' + object.name)
-                                return True
-
-        def checkFaceNumber(mesh_list):  #checks if the number of faces exceeds max ushort, which is used to save the indices
-            for object in mesh_list:
-                if len(object.data.polygons) > 65535:
-                    raise RuntimeError('Face number exceeds uShort max on object: ' + object.name + ' split mesh into multiple objects')
-                    return True
-
-        def checkTranslation(mesh_list): #prints warning when translation is not default
-            for object in mesh_list:
-                if object.location != mathutils.Vector((0.0, 0.0, 0.0)) or object.rotation_euler != mathutils.Euler((0.0, 0.0, 0.0), 'XYZ') or object.scale != mathutils.Vector((1.0, 1.0, 1.0)):
-                    print('Warning: ' + object.name + ' is not aligned with the world origin, apply translation or bind to bone')
-
-        def checkTranslationArmature(): #prints warning when translation is not default
-            armature = utils.findArmature()
-            if armature != None:
-                if armature.location != mathutils.Vector((0.0, 0.0, 0.0)) or armature.rotation_euler != mathutils.Euler((0.0, 0.0, 0.0), 'XYZ') or armature.scale != mathutils.Vector((1.0, 1.0, 1.0)):
-                    print('Warning: active Armature is not aligned with the world origin')
+        def exportFailed():
+            with disable_exception_traceback():
+                raise Exception('ALAMO - EXPORT FAILED')
 
         def unhide():
             hiddenList = []
@@ -1397,21 +1357,6 @@ class ALO_Exporter(bpy.types.Operator):
             for object in bpy.data.objects:
                 object.hide_render =  hiddenList[counter]
                 counter += 1
-
-        def create_export_list(collection):
-            export_list = []
-
-            if(collection.hide_viewport):
-                return export_list
-
-            for object in collection.objects:
-                if(object.type == 'MESH' and (object.hide_viewport == False or self.exportHiddenObjects)):
-                    export_list.append(object)
-
-            for child in collection.children:
-                export_list.extend(create_export_list(child))
-
-            return export_list
 
         #hidden objects and collections can't be accessed, avoid problems
         def unhide_collections(collection_parent):
@@ -1457,18 +1402,17 @@ class ALO_Exporter(bpy.types.Operator):
                 exporter.exportAnimation(filePath + "_" + action.name + ".ALA")
 
 
-        mesh_list = create_export_list(bpy.context.scene.collection)
+        mesh_list = validation.create_export_list(bpy.context.scene.collection, self.exportHiddenObjects, self.useNamesFrom)
 
         #check if export objects satisfy requirements (has material, UVs, ...)
+        messages = validation.validate(mesh_list)
         
-        if(self.checkshadowObjects):
-            checkShadowMesh(mesh_list)
-        checkUV(mesh_list)
-        checkFaceNumber(mesh_list)
-        checkTranslation(mesh_list)
-        checkTranslationArmature()
-        checkInvalidArmatureModifier(mesh_list)
+        if messages is not None and len(messages) > 0:
+            for message in messages:
+                self.report(*message)
+            exportFailed()
 
+        
         hiddenList = unhide()
         collection_is_hidden_list = unhide_collections(bpy.context.scene.collection)
 
@@ -1476,20 +1420,24 @@ class ALO_Exporter(bpy.types.Operator):
 
         global file
 
-        file = open(path, 'wb')  # open file in read binary mode
+        if os.access(path, os.W_OK) or not os.access(path, os.F_OK):
+            file = open(path, 'wb')  # open file in read binary mode
 
-        bone_name_per_alo_index = create_skeleton()
-        create_mesh(mesh_list, bone_name_per_alo_index)
-        create_connections(mesh_list)
+            bone_name_per_alo_index = create_skeleton()
+            create_mesh(mesh_list, bone_name_per_alo_index)
+            create_connections(mesh_list)
 
-        file.close()
-        file = None
-        #removeShadowDoubles()
-        hide(hiddenList)
-        hide_collections(bpy.context.scene.collection, collection_is_hidden_list, 0)
+            file.close()
+            file = None
+            #removeShadowDoubles()
+            hide(hiddenList)
+            hide_collections(bpy.context.scene.collection, collection_is_hidden_list, 0)
 
-        if(self.exportAnimations):
-            exportAnimations(path)
+            if(self.exportAnimations):
+                exportAnimations(path)
+        else:
+            self.report({"ERROR"}, f'ALAMO - Could not write to {os.path.split(path)[1]}')
+            exportFailed()
 
         return {'FINISHED'}  # this lets blender know the operator finished successfully.
 
