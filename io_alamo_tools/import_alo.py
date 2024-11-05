@@ -1035,6 +1035,10 @@ class ALO_Importer(bpy.types.Operator):
                 if os.path.isfile(path):
                     img = bpy.data.images.load(path)
                 else:
+                    with open(path, "a") as placeholder:
+                        placeholder.write('placeholder')
+                    img = bpy.data.images.load(path)
+                    os.remove(path)
                     self.report({"WARNING"}, "ALAMO - Couldn't find texture: " + texture_name)
                     return
 
