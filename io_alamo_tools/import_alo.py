@@ -832,9 +832,9 @@ class ALO_Importer(bpy.types.Operator):
         def get_n_objects_n_proxies():
             size = read_chunk_length()
             file.seek(2, 1)
-            n_objects = struct.unpack("l", file.read(4))
+            n_objects = struct.unpack("i", file.read(4))
             file.seek(2, 1)
-            n_proxies = struct.unpack("l", file.read(4))
+            n_proxies = struct.unpack("i", file.read(4))
             n_objects_proxies = {
                 "n_objects": n_objects[0], "n_proxies": n_proxies[0]}
 
