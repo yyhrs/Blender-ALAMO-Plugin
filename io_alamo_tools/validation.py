@@ -106,7 +106,7 @@ def checkFaceNumber(object):
 
 def checkTranslation(object):  # prints warning when translation is not default
     if object.location != mathutils.Vector((0.0, 0.0, 0.0)) or object.rotation_euler != mathutils.Euler((0.0, 0.0, 0.0), 'XYZ'):
-        return [({'ERROR'}, f'ALAMO - {object.name} is not aligned with the world origin; apply translation or bind to bone')]
+        return [({'WARNING'}, f'ALAMO - {object.name} is not aligned with the world origin; apply translation or bind to bone')]
     return []
 
 def checkScale(object):  # prints warning when scale is not default
@@ -150,7 +150,7 @@ def checkTranslationArmature():  # prints warning when translation is not defaul
         or armature.rotation_euler != mathutils.Euler((0.0, 0.0, 0.0), 'XYZ')
         or armature.scale != mathutils.Vector((1.0, 1.0, 1.0))
     ):
-        return [({'ERROR'}, f'ALAMO - Armature {armature} is not aligned with the world origin; apply translation')]
+        return [({'WARNING'}, f'ALAMO - Armature {armature} is not aligned with the world origin; apply translation')]
     return []
 
 def checkProxyKeyframes():
@@ -182,7 +182,6 @@ def validate(mesh_list):
         checkShadowMesh,
         checkUV,
         checkFaceNumber,
-        checkTranslation,
         checkInvalidArmatureModifier,
         checkScale,
         checkVertexGroups,
