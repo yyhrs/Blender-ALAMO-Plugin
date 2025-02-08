@@ -1099,10 +1099,8 @@ class ALO_Importer(bpy.types.Operator):
 
         def loadAnimations(filePath):
             # remove ending
-            filePath = filePath[0:-4]
-            fileNameIndex = filePath.rfind("\\") + 1
-            path = filePath[0:fileNameIndex]
-            fileName = filePath[fileNameIndex:]
+            path = os.path.dirname(filePath)
+            fileName = os.path.basename(filePath)[0:-4]
             bpy.context.scene.modelFileName = fileName
 
             animationFiles = []
@@ -1117,7 +1115,7 @@ class ALO_Importer(bpy.types.Operator):
             arm.animation_data_create()
 
             for animFile in animationFiles:
-                importer.loadAnimation(path + animFile)
+                importer.loadAnimation(os.path.join(path, animFile))
 
         global assignedVertexGroups
         assignedVertexGroups = []

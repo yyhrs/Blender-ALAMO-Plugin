@@ -362,9 +362,7 @@ class AnimationImporter():
             data = read_next_chunk(filePath)
             if(validate(data)):
 
-                filePath = filePath[0:-4]
-                fileNameIndex = filePath.rfind("\\") + 1
-                fileName = filePath[fileNameIndex:]
+                fileName = os.path.basename(filePath)[0:-4]
 
                 modelName = bpy.context.scene.modelFileName #doesn't always match
 
