@@ -1132,7 +1132,7 @@ class ALO_Importer(bpy.types.Operator):
         meshList = []
 
         global fileName
-        fileName = os.path.basename(filePath)[0:-4]
+        fileName = os.path.basename(self.properties.filepath)[0:-4]
 
         global importCollection
         importCollection = bpy.data.collections.new(fileName)
