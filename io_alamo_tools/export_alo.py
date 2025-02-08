@@ -1384,19 +1384,11 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
 
 
         def exportAnimations(filePath):
-
             arm = utils.findArmature()
             if(arm == None or arm.animation_data == None):
                 return
-
-            #remove ending
             filePath = filePath[0:-4]
-            fileNameIndex = filePath.rfind("\\") + 1
-            path = filePath[0:fileNameIndex]
-            fileName = filePath[fileNameIndex:]
-
             exporter = export_ala.AnimationExporter()
-
             for action in bpy.data.actions:
                 arm.animation_data.action = action
                 exporter.exportAnimation(filePath + "_" + action.name + ".ALA")
