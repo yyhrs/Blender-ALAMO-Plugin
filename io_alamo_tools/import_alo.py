@@ -1028,19 +1028,22 @@ class ALO_Importer(bpy.types.Operator):
             else:
                 path = file.name
                 path = os.path.split(path)[0]
-                path = os.path.split(path)[0] + "/TEXTURES/" + texture_name
-                if self.properties.textureOverride != "NONE":
-                    path = textureOverride(path, self.properties.textureOverride, texture_name)
-
-                if os.path.isfile(path):
-                    img = bpy.data.images.load(path)
-                else:
-                    with open(path, "a") as placeholder:
-                        placeholder.write('placeholder')
-                    img = bpy.data.images.load(path)
-                    os.remove(path)
-                    self.report({"WARNING"}, "ALAMO - Couldn't find texture: " + texture_name)
-                    return
+                path = os.path.split(path)[0]
+                for directory in os.listdir(path):
+                    if directory.upper() == 'TEXTURES':
+                        path = f'{path}/{directory}/{texture_name}'
+                        if self.properties.textureOverride != "NONE":
+                            path = textureOverride(path, self.properties.textureOverride, texture_name)
+                        if os.path.exists(path):
+                            img = bpy.data.images.load(path)
+                        else:
+                            with open(path, "a") as placeholder:
+                                placeholder.write('placeholder')
+                            img = bpy.data.images.load(path)
+                            os.remove(path)
+                            self.report({"WARNING"}, "ALAMO - Couldn't find texture: " + texture_name)
+                        return
+                self.report({"WARNING"}, "ALAMO - Couldn't find: " + path)
 
         def validate_material_prop(name):
             material_props = ["BaseTexture", "NormalTexture", "GlossTexture", "WaveTexture", "DistortionTexture", "CloudTexture", "CloudNormalTexture", "Emissive", "Diffuse", "Specular", "Shininess", "Colorization" \
