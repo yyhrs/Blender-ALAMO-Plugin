@@ -22,8 +22,6 @@ bl_info = {
     "category": "Import-Export"
 }
 
-ADDON_FOLDER = 'io_alamo_tools'
-
 modules = (
     '.validation',
     '.UI',
@@ -38,8 +36,8 @@ modules = (
 
 def import_modules():
     for mod in modules:
-        #print('importing with importlib.import_module =' + str(mod) + "=")
-        importlib.import_module(mod, ADDON_FOLDER)
+        print('importing with importlib.import_module =' + str(mod) + "=")
+        importlib.import_module(mod, __package__)
 
 def reimport_modules():
     '''
@@ -47,7 +45,7 @@ def reimport_modules():
     '''
     for mod in modules:
         # Reimporting modules during addon development
-        want_reload_module = importlib.import_module(mod, ADDON_FOLDER)
+        want_reload_module = importlib.import_module(mod, __package__)
         importlib.reload(want_reload_module)
 
 from . import validation
