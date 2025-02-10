@@ -36,7 +36,7 @@ modules = (
 
 def import_modules():
     for mod in modules:
-        print('importing with importlib.import_module =' + str(mod) + "=")
+        # print('importing with importlib.import_module =' + str(mod) + "=")
         importlib.import_module(mod, __package__)
 
 def reimport_modules():
