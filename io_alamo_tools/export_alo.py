@@ -90,7 +90,10 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
         items = skeletonEnumCallback,
     )
 
-    extentionEnum: EnumProperty(
+    def extension_update(self, context):
+        ALO_Exporter.filename_ext = self.extention
+
+    extention: EnumProperty(
         name = "Extension",
         description = "Whether the exporter should use object or mesh names.",
         items=(
@@ -98,8 +101,8 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
             ('.ALO', ".ALO", ""),
         ),
         default = filename_ext,
+        update=extension_update,
     )
-
 
     def draw(self, context):
         layout = self.layout
@@ -117,7 +120,7 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
         row.prop(bpy.context.scene.ActiveSkeleton, "skeletonEnum")
 
         row = layout.row(heading="Extension")
-        row.prop(self, "extentionEnum", expand = True)
+        row.prop(self, "extention", expand = True)
 
     def execute(self, context):  # execute() is called by blender when running the operator.
 
@@ -1425,7 +1428,6 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
         global file
 
         if os.access(path, os.W_OK) or not os.access(path, os.F_OK):
-            path = path.replace(self.filename_ext, self.extentionEnum)
             file = open(path, 'wb')  # open file in read binary mode
 
             bone_name_per_alo_index = create_skeleton()
