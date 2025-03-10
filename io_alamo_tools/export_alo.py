@@ -64,12 +64,12 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
                               default="")
 
     exportAnimations : BoolProperty(
-            name="Export Animations",
+            name="Animations",
             description="Export all animation actions as .ALA files, into the same directory",
             default=True,
             )
     exportHiddenObjects : BoolProperty(
-            name="Export Hidden Objects",
+            name="Hidden Objects",
             description="Export all objects, regardless of if they are hidden",
             default=True,
             )
@@ -90,22 +90,34 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
         items = skeletonEnumCallback,
     )
 
+    extentionEnum: EnumProperty(
+        name = "Use Names From",
+        description = "Whether the exporter should use object or mesh names.",
+        items=(
+            ('.alo', ".alo", ""),
+            ('.ALO', ".ALO", ""),
+        ),
+        default = filename_ext,
+    )
+
 
     def draw(self, context):
         layout = self.layout
         layout.use_property_split = True
 
-        row = layout.row()
+        row = layout.row(heading="Export")
         row.prop(self, "exportAnimations")
         row = layout.row()
         row.prop(self, "exportHiddenObjects")
 
         row = layout.row(heading="Names From")
-        row.use_property_split = False
         row.prop(self, "useNamesFrom", expand = True)
 
-        row = layout.row()
+        row = layout.row(heading="Armature")
         row.prop(bpy.context.scene.ActiveSkeleton, "skeletonEnum")
+
+        row = layout.row(heading="Extension")
+        row.prop(self, "extentionEnum", expand = True)
 
     def execute(self, context):  # execute() is called by blender when running the operator.
 
@@ -1413,6 +1425,7 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
         global file
 
         if os.access(path, os.W_OK) or not os.access(path, os.F_OK):
+            path = path.replace(self.filename_ext, self.extentionEnum)
             file = open(path, 'wb')  # open file in read binary mode
 
             bone_name_per_alo_index = create_skeleton()
