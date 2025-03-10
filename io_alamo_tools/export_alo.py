@@ -91,7 +91,7 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
     )
 
     extentionEnum: EnumProperty(
-        name = "Use Names From",
+        name = "Extension",
         description = "Whether the exporter should use object or mesh names.",
         items=(
             ('.alo', ".alo", ""),
