@@ -652,7 +652,7 @@ class ALO_Importer(bpy.types.Operator):
 
             # TODO: Extract set_alamo_shader's shader finder to new function, use that here.
             material_props = ["BaseTexture", "NormalTexture", "GlossTexture", "WaveTexture", "DistortionTexture", "CloudTexture", "CloudNormalTexture", "Emissive", "Diffuse", "Specular", "Shininess", "Colorization", "DebugColor", "UVOffset", "Color", "UVScrollRate", "DiffuseColor",
-                              "EdgeBrightness", "BaseUVScale", "WaveUVScale", "DistortUVScale", "BaseUVScrollRate", "WaveUVScrollRate", "DistortUVScrollRate", "BendScale", "Diffuse1", "CloudScrollRate", "CloudScale", "SFreq",  "TFreq", "DistortionScale", "Atmosphere", "CityColor", "AtmospherePower", "SpecularTexture"]
+                              "EdgeBrightness", "BaseUVScale", "WaveUVScale", "DistortUVScale", "BaseUVScrollRate", "WaveUVScrollRate", "DistortUVScrollRate", "BendScale", "Diffuse1", "CloudScrollRate", "CloudScale", "SFreq",  "TFreq", "DistortionScale", "Atmosphere", "CityColor", "AtmospherePower", "SpecularTexture", "UVOffsetX", "UVOffsetY", "UVScaleFactor", "MaskTexture"]
 
             for texture in material_props:
                 if texture in oldMat:
@@ -1048,7 +1048,7 @@ class ALO_Importer(bpy.types.Operator):
         def validate_material_prop(name):
             material_props = ["BaseTexture", "NormalTexture", "GlossTexture", "WaveTexture", "DistortionTexture", "CloudTexture", "CloudNormalTexture", "Emissive", "Diffuse", "Specular", "Shininess", "Colorization" \
                 , "DebugColor", "UVOffset", "Color", "UVScrollRate", "DiffuseColor", "EdgeBrightness", "BaseUVScale", "WaveUVScale", "DistortUVScale", "BaseUVScrollRate", "WaveUVScrollRate", "DistortUVScrollRate", "BendScale" \
-                , "Diffuse1", "CloudScrollRate", "CloudScale", "SFreq", "TFreq", "DistortionScale", "Atmosphere", "CityColor", "AtmospherePower", "SpecularTexture"]
+                , "Diffuse1", "CloudScrollRate", "CloudScale", "SFreq", "TFreq", "DistortionScale", "Atmosphere", "CityColor", "AtmospherePower", "SpecularTexture", "UVOffsetX", "UVOffsetY", "UVScaleFactor", "MaskTexture"]
 
             if(name in material_props):
                 return True

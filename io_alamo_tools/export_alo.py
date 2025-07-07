@@ -906,6 +906,14 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
                     chunk += mat_float_chunk("MappingScale", material.MappingScale)
                 elif (parameter == "BlendSharpness"):
                     chunk += mat_float_chunk("BlendSharpness", material.MappingScale)
+                elif (parameter == "UVOffsetX"):
+                    chunk += mat_float_chunk("UVOffsetX", material.UVOffsetX)
+                elif (parameter == "UVOffsetY"):
+                    chunk += mat_float_chunk("UVOffsetY", material.UVOffsetY)
+                elif (parameter == "UVScaleFactor"):
+                    chunk += mat_float_chunk("UVScaleFactor", material.UVScaleFactor)
+                elif (parameter == "MaskTexture"):
+                    chunk += mat_tex_chunk("MaskTexture", material.MaskTexture)
                 #else:
                     #print("warning: unkown shader parameter: " + parameter)    #for debugging
             return chunk

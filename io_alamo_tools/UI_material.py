@@ -194,6 +194,17 @@ def register():
     bpy.types.Material.BlendSharpness = bpy.props.FloatProperty(
         min=0.0, max=255.0, default=0.1
     )
+    # Custom material parameters
+    bpy.types.Material.UVOffsetX = bpy.props.FloatProperty(
+        min=-255.0, max=255.0, default=0.0
+    )
+    bpy.types.Material.UVOffsetY = bpy.props.FloatProperty(
+        min=-255.0, max=255.0, default=0.0
+    )
+    bpy.types.Material.UVScaleFactor = bpy.props.FloatProperty(
+        min=0.1, max=255.0, default=1.0
+    )
+    bpy.types.Material.MaskTexture = bpy.props.StringProperty(default="None")
 
 
 def unregister():
@@ -248,6 +259,11 @@ def unregister():
     # tryplanar mapping properties
     bpy.types.Material.MappingScale
     bpy.types.Material.BlendSharpness
+    # Custom material parameters
+    bpy.types.Material.UVOffsetX
+    bpy.types.Material.UVOffsetY
+    bpy.types.Material.UVScaleFactor
+    bpy.types.Material.MaskTexture
 
 
 if __name__ == "__main__":
