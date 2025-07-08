@@ -46,7 +46,13 @@ material_parameter_dict = {
 	"MeshAlphaGloss.fx": ["Emissive", "Diffuse", "Specular", "Shininess", "BaseTexture"],
 	"MeshBumpSpecGlowColorize.fx": ["Emissive", "Diffuse", "Colorization", "UVOffset", "BaseTexture", "NormalTexture", "SpecularTexture"],
 	"MeshBumpReflectColorize.fx": ["Emissive", "Diffuse", "Specular", "Shininess", "Colorization", "UVOffset",
-							"BaseTexture", "NormalTexture"]
+							"BaseTexture", "NormalTexture"],
+    "MeshGlow.fx": ["BaseTexture", "DistortionScale"],
+	"MeshAdditiveScalar.fx": ["BaseTexture", "UVScrollRate", "Color", "DistortionScale"],
+	"MeshBumpColorizeTile.fx": ["Emissive", "Diffuse", "Specular", "Colorization", "UVOffsetX", "UVOffsetY", "UVScaleFactor",
+							"BaseTexture", "NormalTexture", "MaskTexture"],
+
+
 }
 
 vertex_format_dict = {
@@ -84,12 +90,16 @@ vertex_format_dict = {
     "MeshAdditiveVColor.fx"    : "alD3dVertNU2C",
     "MeshAlphaGloss.fx"     : "alD3dVertNU2",
     "MeshBumpSpecGlowColorize.fx" : "alD3dVertNU2C",
-    "MeshBumpReflectColorize.fx"  : "alD3dVertNU2U3U3"
+    "MeshBumpReflectColorize.fx"  : "alD3dVertNU2U3U3",
+    "MeshGlow.fx"           : "alD3dVertNU2",
+    "MeshAdditiveScalar.fx" : "alD3dVertNU2",
+    "MeshBumpColorizeTile.fx"   : "alD3dVertNU2U3U3",
+
 }
 
 billboard_array = {"Disable":0, "Parallel":1, "Face":2, "ZAxis View": 3, "ZAxis Light":4, "ZAxis Wind":5, "Sunlight Glow":6, "Sun":7}
 
-bumpMappingList = ['MeshBumpColorize.fx', 'MeshBumpReflectColorize.fx', 'MeshBumpColorizeVertex.fx', 'MeshBumpColorizeDetail.fx', "MeshBumpLight.fx", "Planet.fx", "RSkinBumpColorize.fx", "TerrainMeshBump.fx", "Tree.fx", "MeshBumpSpecColorize.fx"]
+bumpMappingList = ['MeshBumpColorize.fx', 'MeshBumpReflectColorize.fx', 'MeshBumpColorizeVertex.fx', 'MeshBumpColorizeDetail.fx', "MeshBumpLight.fx", "Planet.fx", "RSkinBumpColorize.fx", "TerrainMeshBump.fx", "Tree.fx", "MeshBumpSpecColorize.fx", "MeshBumpColorizeTile.fx"]
 
 rotation_curve_name = ['].rotation_quaternion', '].rotation_euler']
 
